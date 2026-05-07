@@ -29,6 +29,26 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Running Tests
+
+To install test dependencies:
+
+```bash
+pnpm add -D vitest @vitejs/plugin-react @testing-library/react @testing-library/jest-dom jsdom
+```
+
+To run the unit tests:
+
+```bash
+pnpm test
+```
+
+To run tests in watch mode:
+
+```bash
+pnpm test --watch
+```
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
