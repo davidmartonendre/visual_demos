@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Harvest Hero</title>
-<meta name="description" content="The idle farm game from the playable ad — except this actually is the game.">
+<meta name="description" content="A cosy isometric farm tycoon: sweep the wheat, haul the harvest, build up the farm.">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;overflow:hidden;background:#1b2a14;
@@ -15,29 +15,8 @@
 
   .pop{text-shadow:0 2px 0 rgba(0,0,0,.45)}
 
-  /* ---------- fake-ad chrome ---------- */
-  #adword{position:absolute;top:calc(env(safe-area-inset-top,0px) + 6px);left:0;right:0;text-align:center;
-    font-size:12px;letter-spacing:.06em;color:rgba(255,255,255,.55);pointer-events:none;z-index:6}
-  #brand{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:12px;z-index:7}
-  #logo{font-size:21px;line-height:1;font-weight:900;letter-spacing:-.5px;
-    color:#ffd83d;-webkit-text-stroke:0px;
-    text-shadow:0 0 0 #6b3b0d,2px 2px 0 #6b3b0d,-2px 2px 0 #6b3b0d,2px -2px 0 #6b3b0d,-2px -2px 0 #6b3b0d,0 5px 0 #a8560f,0 7px 8px rgba(0,0,0,.45)}
-  #logo small{display:block;font-size:9px;letter-spacing:.32em;color:#fff;
-    text-shadow:1px 1px 0 #6b3b0d,-1px 1px 0 #6b3b0d,1px -1px 0 #6b3b0d,-1px -1px 0 #6b3b0d;margin-top:3px}
-  #install{margin-top:9px;display:block;border:none;cursor:pointer;
-    font-family:inherit;font-weight:900;font-size:19px;letter-spacing:.04em;color:#fff;
-    padding:7px 18px 10px;border-radius:14px;
-    background:linear-gradient(#63c1ff,#2f8fe0);box-shadow:0 5px 0 #1d6bb0,0 8px 12px rgba(0,0,0,.35);
-    text-shadow:0 2px 0 rgba(0,0,0,.28);animation:breathe 2.4s ease-in-out infinite}
-  #install:active{transform:translateY(4px);box-shadow:0 1px 0 #1d6bb0}
-  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
-
-  #skip{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);right:14px;z-index:8;
-    width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
-    background:rgba(20,14,6,.72);color:#fff;font-size:17px;display:grid;place-items:center}
-
   /* ---------- resource pills ---------- */
-  #res{position:absolute;top:calc(env(safe-area-inset-top,0px) + 54px);right:14px;z-index:5;
+  #res{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;z-index:5;
     display:flex;flex-direction:column;gap:6px;align-items:flex-end}
   .pill{position:relative;height:36px;min-width:126px;border-radius:18px;
     background:linear-gradient(#3a2e20,#241a10);box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 3px 6px rgba(0,0,0,.4);
@@ -82,15 +61,6 @@
 <div id="wrap">
   <canvas id="game"></canvas>
 
-  <div id="adword" class="pop">ADVERTISEMENT</div>
-
-  <div id="brand">
-    <div id="logo" class="pop">HARVEST HERO<small>FARM TYCOON</small></div>
-    <button id="install">INSTALL</button>
-  </div>
-
-  <button id="skip" title="Skip ad">&#9654;&#9654;|</button>
-
   <div id="res">
     <div class="pill pop" id="p-coin"><i>&#128181;</i><span>0</span></div>
     <div class="pill pop" id="p-wheat"><i>&#127806;</i><span>0</span></div>
@@ -118,7 +88,7 @@
 <script>
 'use strict';
 /* =========================================================================
-   HARVEST HERO — the idle farm game from the playable ad.
+   HARVEST HERO — an idle isometric farm tycoon.
    Single file, no dependencies, no build step. Canvas 2D isometric.
    ========================================================================= */
 
@@ -224,7 +194,7 @@ function resetGame(){
 const player = ()=> actors[0];
 
 /* -------------------------------------------------------------- customers
-   Cosmetic villagers queuing at the market — pure life, like in the ad.   */
+   Cosmetic villagers walking the village road — background life.        */
 function newCustomer(i){
   return { t:rnd(0,1), speed:rnd(.32,.46), off:rnd(-.5,.5), lane:i%3,
            want:['wheat','egg','pie'][i%3], tint:['#4e7fd4','#d4684e','#5fb04e','#e0b23c','#9b59b6','#16a085','#e67e22'][i%7] };
@@ -1194,22 +1164,10 @@ let pendingReset = false;
 
 function winModal(){
   modal('FARM LEVEL 12!',
-    '<p>You built the whole farm. Wheat, eggs, pies, staff — the lot.</p>'+
-    '<p>And here is the twist: <b>this is the full game.</b> No install, no timers, no 3-day wheat.</p>'+
-    '<p class="sub">Keep playing — the pads go higher.</p>', 'NICE');
+    '<p>The whole farm is running \u2014 wheat, eggs, pies, and a crew to work them.</p>'+
+    '<p class="sub">Keep going. The upgrade pads go a lot higher than this.</p>', 'NICE');
 }
 
-el('install').onclick = ()=>{
-  modal('Already installed ✨',
-    '<p>You are playing the game from the ad. That IS the product.</p>'+
-    '<p>No 47-hour build timers, no gem shop, no "the real game is a match-3".</p>'+
-    '<p class="sub">Bookmark the tab. That is the install button.</p>', 'BACK TO THE FARM');
-};
-el('skip').onclick = ()=>{
-  modal('Skip to what?',
-    '<p>There is no app store page behind this. The ad and the game are the same thing.</p>'+
-    '<p class="sub">Awkward, right?</p>', 'FINE');
-};
 el('b-sound').onclick = ()=>{
   G.sound = !G.sound;
   el('b-sound').innerHTML = G.sound ? '&#128266;' : '&#128263;';

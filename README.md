@@ -1,14 +1,11 @@
 # 🌾 Harvest Hero
 
-**The farm game from the playable ad — except this actually is the game.**
+A cosy isometric farm tycoon that runs in one HTML file.
 
-You know the ones: a little farmer sweeps through a wheat field, the crops fall, a
-ridiculous stack of loot piles up over their head, they dump it at a counter and
-money flies everywhere. Then you install it and it's a menu simulator with 47-hour
-build timers.
-
-This is that ad, built as an actual game. One HTML file. No install button that does
-anything (there is one, it's a joke).
+Sweep through a wheat field and the crop falls in an arc around you, stacking into a
+tower over your head. Haul it to the market, spend the coins on upgrades, unlock
+buildings that turn wheat into something worth more, and hire a crew to do the
+cutting for you.
 
 ## Play it
 
@@ -42,9 +39,10 @@ things to make them happen.
    `TAKE` tray. Eggs sell for ~4× wheat.
 5. **Hire farmhands.** They harvest and haul on their own, feeding whichever building
    is emptiest. They never sit idle; when both buildings are full they sell at the
-   market instead.
+   market instead. Moving eggs to the bakery stays your job — that's what keeps you
+   useful once the farm is automated.
 6. **Unlock the Bakery.** Wheat + eggs → pies. Pies sell for ~11× wheat.
-7. **Farm Level 12** is the finish line. There's a payoff.
+7. **Farm Level 12** is the finish line, though the upgrade pads keep going past it.
 
 Your farm saves to `localStorage` automatically. The ↺ button wipes it.
 
@@ -54,3 +52,5 @@ Your farm saves to `localStorage` automatically. The ↺ button wipes it.
 - Everything is drawn procedurally on a 2D canvas in an isometric projection —
   no image files, no sprite sheets, no fonts to download.
 - Roughly 1.8 ms of work per frame, so it idles at 60 fps with lots of headroom.
+- Buildings, upgrades and prices are data-driven: see `STATIONS`, `PADS` and `ITEMS`
+  at the top of the script.
