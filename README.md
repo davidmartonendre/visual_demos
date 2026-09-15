@@ -40,6 +40,12 @@ things to make them happen.
    to the field. Serving is the one job the farmhands never do for you.
 3. **Stand on a glowing pad.** Your coins drain into it until the upgrade is paid off.
    Scythe reach, carry capacity, move speed, faster regrowth.
+
+   The two main upgrades are paced differently on purpose: the **backpack** is cheap
+   to climb and runs 20 levels from 12 items to **1,012**, while the **scythe** roughly
+   doubles in price each level, so raw cutting power is the expensive one. A late-game
+   backpack holds most of a full field, which turns hauling from a constant chore into
+   one big trip.
 4. **Unlock the Chicken Coop.** Wheat goes in the `FEED` tray, eggs come out of the
    `TAKE` tray. Eggs sell for ~4× wheat.
 5. **Hire farmhands.** They harvest and haul on their own, feeding whichever building

@@ -132,7 +132,7 @@ const STATIONS = [
             {mode:'in',  item:'egg',   x:10.2, y:24.0, w:2.0, h:2.0},
             {mode:'out', item:'pie',   x:10.2, y:26.2, w:2.0, h:2.0} ] },
 ];
-const TRAY_CAP = 24;
+const TRAY_CAP = 50;
 
 /* The roadside farm stand. Villagers queue here and pay over the odds for
    whatever they happen to want; the market takes anything at list price. */
@@ -144,10 +144,10 @@ const standPrice = k => Math.round(ITEMS[k].price * STAND_BONUS);
 
 /* Upgrade pads — stand on one and your coins pour in until it's paid off. */
 const PADS = [
-  { id:'scythe', name:'SCYTHE',        icon:'✂', x:14.6, y:6.0,  cost:20,  mul:1.7, max:8,
+  { id:'scythe', name:'SCYTHE',        icon:'✂', x:14.6, y:6.0,  cost:26,  mul:2.05, max:8,
     desc:l=>'Harvest speed '+(100+35*l)+'%', show:()=>true },
-  { id:'bag',    name:'BACKPACK',      icon:'\u{1F392}', x:17.4, y:9.4, cost:35, mul:1.8, max:8,
-    desc:l=>'Carry '+(12+6*l)+' items',      show:()=>true },
+  { id:'bag',    name:'BACKPACK',      icon:'\u{1F392}', x:17.4, y:9.4, cost:22, mul:1.34, max:20,
+    desc:l=>'Carry '+capAt(l)+' items',      show:()=>true },
   { id:'boots',  name:'BOOTS',         icon:'\u{1F462}', x:14.6, y:12.8, cost:70, mul:1.9, max:6,
     desc:l=>'Move speed '+(100+14*l)+'%',    show:()=>G.earned>=70 },
   { id:'field',  name:'FERTILIZER',    icon:'\u{1F331}', x:17.4, y:16.2, cost:110, mul:1.9, max:6,
@@ -164,7 +164,8 @@ const PADS = [
 let G, field, actors, flyers, pops, puffs, coinFx, customers;
 
 function padCost(p){ const l=G.up[p.id]||0; return Math.round(p.cost*Math.pow(p.mul,l)); }
-function capacity(){ return 12 + 6*G.up.bag; }
+function capAt(l){ return 12 + 10*l + 2*l*l; }   // 12, 24, 40, 60, 84 ... 1012
+function capacity(){ return capAt(G.up.bag); }
 function harvestRate(){ return 2.6 * (1 + 0.35*G.up.scythe); }
 function yieldPer(){ return 1 + Math.floor(G.up.scythe/2); }
 function regrowTime(){ return 7 / (1 + 0.30*G.up.field); }
@@ -267,9 +268,10 @@ function serveStand(a, dt){
     const c = waiting.find(c=>c.n>0 && a.carry[c.want]>0);
     if(!c) break;
     a.ioT -= IO_INTERVAL;
-    a.carry[c.want]--; c.n--;
+    const step = Math.min(a.carry[c.want], c.n, flowStep(c.n));
+    a.carry[c.want] -= step; c.n -= step;
     served = true;
-    const pay = standPrice(c.want), cx = c.x, cy = c.y;
+    const pay = standPrice(c.want)*step, cx = c.x, cy = c.y;
     itemFlyer(c.want, {x:a.x,y:a.y}, {x:cx,y:cy}, ()=>{
       G.coins += pay; G.earned += pay;
       spawnCoinFx(); sfx.coin();
@@ -372,6 +374,9 @@ function inputDir(){
    ===================================================================== */
 let shake = 0, hintTimer = 0;
 const IO_INTERVAL = 0.06;
+/* Any transfer completes in roughly 50 ticks whatever its size, so a 1000-item
+   haul empties as fast as a 12-item one — each flyer just carries more. */
+const flowStep = total => Math.max(1, Math.ceil(total/50));
 
 function inRect(a, r){ return a.x>r.x && a.x<r.x+r.w && a.y>r.y && a.y<r.y+r.h; }
 function rectCenter(r){ return { x:r.x+r.w/2, y:r.y+r.h/2 }; }
@@ -417,7 +422,7 @@ function tileAt(x,y){
   return field[j*FIELD.w+i];
 }
 
-function actorCap(a){ return a.hand ? 12 + 3*G.up.bag : capacity(); }
+function actorCap(a){ return a.hand ? Math.max(12, Math.round(capacity()*0.35)) : capacity(); }
 function reach(){ return 0.75 + 0.15*G.up.scythe; }
 
 function tilesAround(x, y, R){
@@ -483,11 +488,14 @@ function tryStations(a, dt){
 
       if(tr.mode==='sell'){
         if(carried(a)<=0) continue;
+        const step0 = flowStep(actorCap(a));   // constant, so the stack always drains
         while(a.ioT >= IO_INTERVAL && carried(a)>0){
           a.ioT -= IO_INTERVAL;
           const it = a.carry.pie>0 ? 'pie' : a.carry.egg>0 ? 'egg' : 'wheat';
-          a.carry[it]--;
-          const price = ITEMS[it].price;
+          // never in fewer than ~8 parcels, so even a small load still streams
+          const step = Math.max(1, Math.min(a.carry[it], step0, Math.ceil(a.carry[it]/8)));
+          a.carry[it] -= step;
+          const price = ITEMS[it].price * step;
           const p = {x:a.x, y:a.y};
           itemFlyer(it, p, rectCenter({x:s.b.x,y:s.b.y,w:s.b.w,h:s.b.h}), ()=>{
             G.coins += price; G.earned += price;
@@ -503,11 +511,13 @@ function tryStations(a, dt){
       if(tr.mode==='in'){
         const it = tr.item;
         if(a.carry[it]<=0 || s.bin[it]+s.pend[it]>=TRAY_CAP) continue;
+        const step0 = flowStep(TRAY_CAP);
         while(a.ioT >= IO_INTERVAL && a.carry[it]>0 && s.bin[it]+s.pend[it]<TRAY_CAP){
           a.ioT -= IO_INTERVAL;
-          a.carry[it]--; s.pend[it]++;
+          const step = Math.min(a.carry[it], step0, TRAY_CAP - s.bin[it] - s.pend[it]);
+          a.carry[it] -= step; s.pend[it] += step;
           const p={x:a.x,y:a.y}, dst=trayWorld(s,tr);
-          itemFlyer(it, p, dst, ()=>{ s.pend[it]--; s.bin[it]++; });
+          itemFlyer(it, p, dst, ()=>{ s.pend[it]-=step; s.bin[it]+=step; });
           if(!a.hand) sfx.pick();
         }
         return;
@@ -516,11 +526,13 @@ function tryStations(a, dt){
       if(tr.mode==='out'){
         const it = tr.item;
         if(s.out<=0 || carried(a)>=actorCap(a)) continue;
+        const step0 = flowStep(TRAY_CAP);
         while(a.ioT >= IO_INTERVAL && s.out>0 && carried(a)<actorCap(a)){
           a.ioT -= IO_INTERVAL;
-          s.out--;
+          const step = Math.min(s.out, step0, actorCap(a)-carried(a));
+          s.out -= step;
           const src=trayWorld(s,tr);
-          a.carry[it]++;
+          a.carry[it] += step;
           itemFlyer(it, src, {x:a.x,y:a.y}, null);
           if(!a.hand) sfx.pick();
         }
