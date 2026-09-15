@@ -134,6 +134,14 @@ const STATIONS = [
 ];
 const TRAY_CAP = 24;
 
+/* The roadside farm stand. Villagers queue here and pay over the odds for
+   whatever they happen to want; the market takes anything at list price. */
+const STALL = { x:33.2, y:5.4, w:2.4, h:2.0 };          // the stall structure
+const STAND = { x:33.0, y:7.8, w:2.6, h:2.9 };          // where the player stands
+const QUEUE = [ {x:34.3,y:11.4}, {x:34.3,y:13.1}, {x:34.3,y:14.8} ];
+const STAND_BONUS = 1.7;
+const standPrice = k => Math.round(ITEMS[k].price * STAND_BONUS);
+
 /* Upgrade pads — stand on one and your coins pour in until it's paid off. */
 const PADS = [
   { id:'scythe', name:'SCYTHE',        icon:'✂', x:14.6, y:6.0,  cost:20,  mul:1.7, max:8,
@@ -194,17 +202,87 @@ function resetGame(){
 const player = ()=> actors[0];
 
 /* -------------------------------------------------------------- customers
-   Cosmetic villagers walking the village road — background life.        */
-function newCustomer(i){
-  return { t:rnd(0,1), speed:rnd(.32,.46), off:rnd(-.5,.5), lane:i%3,
-           want:['wheat','egg','pie'][i%3], tint:['#4e7fd4','#d4684e','#5fb04e','#e0b23c','#9b59b6','#16a085','#e67e22'][i%7] };
+   Villagers walk the road, queue at the farm stand and buy what they want. */
+function wantedItems(){
+  const out = ['wheat'];
+  if(station('coop').unlocked)   out.push('egg');
+  if(station('bakery').unlocked) out.push('pie');
+  return out;
 }
-function customerPos(c){
-  // walks a lane from the south road up to the market counter, then loops
-  const t = c.t;
-  const x = 33.4 + c.lane*0.85 + c.off;
-  const y = lerp(31, 3.5, t);
-  return { x, y };
+function newCustomer(i){
+  const c = { tint:['#4e7fd4','#d4684e','#5fb04e','#e0b23c','#9b59b6','#16a085','#e67e22'][i%7],
+              carry:{wheat:0,egg:0,pie:0}, cut:0, bob:0, moving:false, face:2.2,
+              x:34.3+rnd(-.5,.5), y:MAP.h-2-i*1.8, slot:-1, order:i, happy:0 };
+  resetCustomer(c, true);
+  return c;
+}
+function resetCustomer(c, first){
+  const pool = wantedItems();
+  c.want  = pool[Math.floor(rnd(0,pool.length))];
+  c.n     = 1 + Math.floor(rnd(0, c.want==='wheat' ? 3 : 2));
+  c.state = 'walk';
+  c.slot  = -1;
+  if(!first){ c.x = 34.3+rnd(-.5,.5); c.y = MAP.h-1.5; }
+}
+
+function updateCustomers(dt){
+  // hand out queue slots, nearest customer to the front
+  for(let i=0;i<QUEUE.length;i++){
+    if(customers.some(c=>c.slot===i)) continue;
+    let best=null;
+    for(const c of customers) if(c.state==='walk' && c.slot<0 && (!best || c.y<best.y)) best=c;
+    if(best) best.slot = i;
+  }
+  let holding = 0;
+  for(const c of customers){
+    let tx=c.x, ty=c.y, speed=1.7;
+    if(c.state==='leave'){
+      tx = c.x; ty = 1.0; speed = 2.4;
+      if(c.y < 2.2){ resetCustomer(c); continue; }
+    } else if(c.slot>=0){
+      tx = QUEUE[c.slot].x; ty = QUEUE[c.slot].y;
+    } else {
+      tx = 34.3; ty = QUEUE[QUEUE.length-1].y + 2.2 + (holding++)*1.7;   // wait in line
+    }
+    const dx=tx-c.x, dy=ty-c.y, m=Math.hypot(dx,dy);
+    if(m > 0.12){
+      c.x += dx/m*speed*dt; c.y += dy/m*speed*dt;
+      c.bob += dt*speed*3.4; c.moving = true;
+      c.face = Math.atan2(dy,dx);
+    } else {
+      c.moving = false;
+      if(c.state==='walk' && c.slot>=0) c.state = 'wait';
+    }
+    if(c.happy>0) c.happy -= dt;
+  }
+}
+
+/* serve the front of the queue — player only, the farmhands never touch it */
+function serveStand(a, dt){
+  if(!inRect(a, STAND)) return false;
+  const waiting = customers.filter(c=>c.state==='wait' && c.n>0);
+  if(waiting.length) hint('stand','Villagers pay '+Math.round((STAND_BONUS-1)*100)+'% over market for what they ask for');
+  let served = false;
+  while(a.ioT >= IO_INTERVAL){
+    const c = waiting.find(c=>c.n>0 && a.carry[c.want]>0);
+    if(!c) break;
+    a.ioT -= IO_INTERVAL;
+    a.carry[c.want]--; c.n--;
+    served = true;
+    const pay = standPrice(c.want), cx = c.x, cy = c.y;
+    itemFlyer(c.want, {x:a.x,y:a.y}, {x:cx,y:cy}, ()=>{
+      G.coins += pay; G.earned += pay;
+      spawnCoinFx(); sfx.coin();
+      pops.push({x:cx, y:cy, z:1.5, t:0, txt:'+'+pay, col:'#7dff8d'});
+      checkLevel();
+    });
+    if(c.n<=0){
+      c.state='leave'; c.slot=-1; c.happy=1.4;
+      for(let i=0;i<10;i++) puffs.push({x:cx,y:cy,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
+        t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
+    }
+  }
+  return served;
 }
 
 /* -------------------------------------------------------------- persistence */
@@ -397,6 +475,7 @@ function itemFlyer(item, from, to, onDone){
 /* interaction with station trays: unload / pick up / sell */
 function tryStations(a, dt){
   a.ioT = (a.ioT||0) + dt;
+  if(!a.hand && serveStand(a, dt)) return;
   for(const s of STATIONS){
     if(!s.unlocked) continue;
     for(const tr of s.trays){
@@ -414,7 +493,6 @@ function tryStations(a, dt){
             G.coins += price; G.earned += price;
             spawnCoinFx(); sfx.coin();
             pops.push({x:a.x,y:a.y,z:1.3,t:0,txt:'+'+price,col:'#7dff8d'});
-            happyCustomer(it);
             checkLevel();
           });
         }
@@ -578,11 +656,6 @@ function checkLevel(){
   }
 }
 
-function happyCustomer(item){
-  const c = customers.find(c=>c.want===item && c.t>0.72);
-  if(c){ c.happy = 1; c.t = 0; c.want = ['wheat','egg','pie'][Math.floor(rnd(0,3))]; }
-}
-
 /* ------------------------------------------------------------ main update */
 function update(dt){
   G.t += dt;
@@ -613,11 +686,7 @@ function update(dt){
   }
   for(let i=coinFx.length-1;i>=0;i--){ const c=coinFx[i]; c.t+=dt/c.dur; if(c.t>=1){ bumpPill('p-coin'); coinFx.splice(i,1);} }
 
-  for(const c of customers){
-    c.t += dt*c.speed*0.12;
-    if(c.happy){ c.happy-=dt; if(c.happy<0) c.happy=0; }
-    if(c.t>1){ c.t = 0; c.off = rnd(-.5,.5); }
-  }
+  updateCustomers(dt);
 
   shake = Math.max(0, shake - dt*26);
   hintTimer = Math.max(0, hintTimer - dt);
@@ -1020,18 +1089,73 @@ function drawPerson(a, sx, sy, tint, opts){
   }
 }
 
-function drawCustomer(c){
-  const pos = customerPos(c), p = iso(pos.x, pos.y);
-  const fake = { bob:G.t*5 + c.off*6, moving:true, face:2.2, cut:0, carry:{wheat:0,egg:0,pie:0} };
-  drawPerson(fake, p.sx, p.sy, c.tint, {hair:'#3d2a16'});
-  if(c.t>0.35){
-    const bx=p.sx+22, by=p.sy-78;
-    ctx.fillStyle='#fff'; roundRect(bx-24,by-18,48,34,12); ctx.fill();
-    poly([[bx-8,by+14],[bx+2,by+14],[bx-8,by+24]], '#fff');
-    drawItem(c.want, bx-6, by, .8);
-    ctx.font='900 15px system-ui,sans-serif'; ctx.fillStyle='#4a3418'; ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText('x'+(1+(c.lane)), bx+6, by);
+function drawStandPad(){
+  const pulse = 0.5 + 0.5*Math.sin(G.t*3);
+  const anyone = customers.some(c=>c.state==='wait' && c.n>0);
+  quad(STAND.x, STAND.y, STAND.w, STAND.h, '#000', .18);
+  quad(STAND.x+.08, STAND.y+.08, STAND.w-.16, STAND.h-.16,
+       anyone ? '#e0a400' : '#8a8f7a', anyone ? .55+0.2*pulse : .34);
+  const c = rectCenter(STAND), p = iso(c.x, c.y);
+  ctx.font='900 21px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#fff'; ctx.strokeStyle='#6b4a00'; ctx.lineWidth=5;
+  ctx.strokeText('SERVE', p.sx, p.sy-4); ctx.fillText('SERVE', p.sx, p.sy-4);
+}
+
+function lerpPt(a, b, t){ return [lerp(a.sx,b.sx,t), lerp(a.sy,b.sy,t)]; }
+
+function drawStall(){
+  const b = STALL, H = 30, AH = 76;
+  const N=iso(b.x,b.y), E=iso(b.x+b.w,b.y), S=iso(b.x+b.w,b.y+b.h), W=iso(b.x,b.y+b.h);
+  const up=(p,h)=>[p.sx, p.sy-h];
+  ctx.globalAlpha=.22; poly([[N.sx,N.sy+5],[E.sx+6,E.sy+5],[S.sx,S.sy+7],[W.sx-6,W.sy+5]],'#000'); ctx.globalAlpha=1;
+  // counter
+  poly([up(W,0),up(S,0),up(S,H),up(W,H)], '#c08b4e');
+  poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#a87740');
+  poly([up(N,H),up(E,H),up(S,H),up(W,H)], '#e8d3ac');
+  // produce sitting on the counter
+  const shown = wantedItems();
+  shown.forEach((k,i)=>{
+    const q = iso(b.x+0.5+i*0.75, b.y+b.h/2);
+    drawItem(k, q.sx, q.sy-H-4, 0.85);
+  });
+  // posts
+  ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=5; ctx.lineCap='round';
+  for(const c of [W,S,E,N]){ ctx.beginPath(); ctx.moveTo(c.sx, c.sy); ctx.lineTo(c.sx, c.sy-AH); ctx.stroke(); }
+  // striped awning
+  const nUp=[N.sx,N.sy-AH], eUp=[E.sx,E.sy-AH], sUp=[S.sx,S.sy-AH], wUp=[W.sx,W.sy-AH];
+  poly([nUp,eUp,sUp,wUp], '#fdf6e6');
+  const NU={sx:nUp[0],sy:nUp[1]}, EU={sx:eUp[0],sy:eUp[1]}, SU={sx:sUp[0],sy:sUp[1]}, WU={sx:wUp[0],sy:wUp[1]};
+  const bands = 6;
+  for(let i=0;i<bands;i+=2){
+    poly([ lerpPt(NU,EU,i/bands), lerpPt(NU,EU,(i+1)/bands),
+           lerpPt(WU,SU,(i+1)/bands), lerpPt(WU,SU,i/bands) ], '#d9483f');
   }
+  poly([nUp,eUp,sUp,wUp], null, '#00000022', 2);
+  const mid = iso(b.x+b.w/2, b.y+b.h/2);
+  signBoard(mid.sx, mid.sy-AH-26, 'FARM STAND');
+}
+
+function drawCustomer(c){
+  const p = iso(c.x, c.y);
+  drawPerson(c, p.sx, p.sy, c.tint, {hair:'#3d2a16'});
+  if(c.happy>0){
+    ctx.font='22px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.globalAlpha = clamp(c.happy,0,1);
+    ctx.fillText('\u2764\uFE0F', p.sx, p.sy-92);
+    ctx.globalAlpha = 1;
+    return;
+  }
+  if(c.state!=='wait' || c.n<=0) return;
+  const bx = p.sx+30, by = p.sy-84 - (c.slot>0 ? (c.slot%2)*24 : 0);
+  const w = 68, h = 38;
+  ctx.fillStyle='#fff'; roundRect(bx-w/2, by-h/2, w, h, 13); ctx.fill();
+  poly([[bx-16,by+h/2-2],[bx-4,by+h/2-2],[bx-20,by+h/2+13]], '#fff');
+  drawItem(c.want, bx-20, by-2, .74);
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.font='900 15px system-ui,sans-serif'; ctx.fillStyle='#4a3418';
+  ctx.fillText('x'+c.n, bx-7, by-7);
+  ctx.font='900 13px system-ui,sans-serif'; ctx.fillStyle='#2e8b3f';
+  ctx.fillText('$'+standPrice(c.want), bx-7, by+9);
 }
 
 /* ------------------------------------------------------------ frame */
@@ -1057,6 +1181,7 @@ function draw(){
 
   for(const s of STATIONS){ if(s.unlocked) for(const tr of s.trays) drawTray(s, tr); }
   for(const p of PADS) drawPadGround(p);
+  drawStandPad();
 
   // depth-sorted entities
   const list = [];
@@ -1066,7 +1191,8 @@ function draw(){
     const p = iso(a.x,a.y);
     list.push({ d:a.x+a.y+0.01, f:()=>drawPerson(a, p.sx, p.sy, a.tint, {hair:a.hand?'#2e2016':'#7a4a1e'}) });
   }
-  for(const c of customers){ const pos=customerPos(c); list.push({ d:pos.x+pos.y, f:()=>drawCustomer(c) }); }
+  for(const c of customers){ list.push({ d:c.x+c.y, f:()=>drawCustomer(c) }); }
+  list.push({ d:(STALL.x+STALL.w/2)+(STALL.y+STALL.h/2), f:drawStall });
   for(const f of flyers){
     const x = lerp(f.x0,f.x1,f.t), y = lerp(f.y0,f.y1,f.t);
     const z = Math.sin(f.t*Math.PI)*f.h + 0.6;

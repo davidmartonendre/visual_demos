@@ -13,5 +13,10 @@ deliberately.
 - Entities are depth-sorted by `x + y`. Anything with height (buildings) will
   occlude whatever sits at a *smaller* `x + y`, which is why the farm buildings are
   on the west/far side and the player's yard is east/near. Keep it that way.
-- Gameplay is data-driven: `STATIONS`, `PADS` and `ITEMS` at the top of the script
-  define the buildings, upgrades and economy. Prefer editing those over adding code.
+- Gameplay is data-driven: `STATIONS`, `PADS`, `ITEMS`, `STAND` and `QUEUE` at the
+  top of the script define the buildings, upgrades, economy and the roadside stand.
+  Prefer editing those over adding code.
+- Villagers are real customers, not scenery: they queue at the farm stand and buy
+  what their bubble asks for. Anything that gives an NPC a visible want must be
+  serveable, and `wantedItems()` gates those wants to goods the player can actually
+  produce yet.

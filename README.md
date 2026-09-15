@@ -31,16 +31,21 @@ things to make them happen.
 
 1. **Sweep the wheat.** Walk through the golden field; your scythe cuts everything in
    reach and it stacks over your head.
-2. **Sell it.** Haul the stack to the `SELL` counter at the Market. Coins fly to your
-   wallet.
+2. **Sell it.** Two places will take it:
+   - the `SELL` counter at the **Market** buys anything, any amount, at list price;
+   - the **Farm Stand** on the village road pays **70% over market**, but only for
+     what the villagers in the queue are actually asking for.
+
+   Bulk goes to the market; the queue is a steady trickle of better money right next
+   to the field. Serving is the one job the farmhands never do for you.
 3. **Stand on a glowing pad.** Your coins drain into it until the upgrade is paid off.
    Scythe reach, carry capacity, move speed, faster regrowth.
 4. **Unlock the Chicken Coop.** Wheat goes in the `FEED` tray, eggs come out of the
    `TAKE` tray. Eggs sell for ~4× wheat.
 5. **Hire farmhands.** They harvest and haul on their own, feeding whichever building
    is emptiest. They never sit idle; when both buildings are full they sell at the
-   market instead. Moving eggs to the bakery stays your job — that's what keeps you
-   useful once the farm is automated.
+   market instead. Moving eggs to the bakery and serving the queue stay your jobs —
+   that's what keeps you useful once the farm is automated.
 6. **Unlock the Bakery.** Wheat + eggs → pies. Pies sell for ~11× wheat.
 7. **Farm Level 12** is the finish line, though the upgrade pads keep going past it.
 
@@ -52,5 +57,7 @@ Your farm saves to `localStorage` automatically. The ↺ button wipes it.
 - Everything is drawn procedurally on a 2D canvas in an isometric projection —
   no image files, no sprite sheets, no fonts to download.
 - Roughly 1.8 ms of work per frame, so it idles at 60 fps with lots of headroom.
-- Buildings, upgrades and prices are data-driven: see `STATIONS`, `PADS` and `ITEMS`
-  at the top of the script.
+- Villagers only ever ask for goods you can currently produce, so there are no
+  impossible orders before the coop and bakery are open.
+- Buildings, upgrades, prices and the stand are data-driven: see `STATIONS`, `PADS`,
+  `ITEMS`, `STAND` and `QUEUE` at the top of the script.
