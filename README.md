@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌾 Harvest Hero
 
-## Getting Started
+**The farm game from the playable ad — except this actually is the game.**
 
-First, run the development server:
+You know the ones: a little farmer sweeps through a wheat field, the crops fall, a
+ridiculous stack of loot piles up over their head, they dump it at a counter and
+money flies everywhere. Then you install it and it's a menu simulator with 47-hour
+build timers.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+This is that ad, built as an actual game. One HTML file. No install button that does
+anything (there is one, it's a joke).
+
+## Play it
+
+Open `index.html` in a browser. That's it — no build step, no dependencies, no server.
+
+```
+git clone <this repo> && open index.html
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Works on desktop and phones.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Controls
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| | |
+|---|---|
+| **Touch** | Drag anywhere — a virtual stick appears under your thumb |
+| **Keyboard** | `WASD` or arrow keys |
 
-## Learn More
+Harvesting, hauling, buying and selling are all automatic — you only steer. Walk into
+things to make them happen.
 
-To learn more about Next.js, take a look at the following resources:
+## The loop
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Sweep the wheat.** Walk through the golden field; your scythe cuts everything in
+   reach and it stacks over your head.
+2. **Sell it.** Haul the stack to the `SELL` counter at the Market. Coins fly to your
+   wallet.
+3. **Stand on a glowing pad.** Your coins drain into it until the upgrade is paid off.
+   Scythe reach, carry capacity, move speed, faster regrowth.
+4. **Unlock the Chicken Coop.** Wheat goes in the `FEED` tray, eggs come out of the
+   `TAKE` tray. Eggs sell for ~4× wheat.
+5. **Hire farmhands.** They harvest and haul on their own, feeding whichever building
+   is emptiest. They never sit idle; when both buildings are full they sell at the
+   market instead.
+6. **Unlock the Bakery.** Wheat + eggs → pies. Pies sell for ~11× wheat.
+7. **Farm Level 12** is the finish line. There's a payoff.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Your farm saves to `localStorage` automatically. The ↺ button wipes it.
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Progress persists across reloads; the 🔊 button mutes the synth sound effects.
+- Everything is drawn procedurally on a 2D canvas in an isometric projection —
+  no image files, no sprite sheets, no fonts to download.
+- Roughly 1.8 ms of work per frame, so it idles at 60 fps with lots of headroom.

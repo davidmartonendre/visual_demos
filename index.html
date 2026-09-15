@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Harvest Hero</title>
+<meta name="description" content="The idle farm game from the playable ad — except this actually is the game.">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#1b2a14;
+    font-family:"Baloo 2",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-weight:800;color:#fff;user-select:none;touch-action:none}
+  #wrap{position:fixed;inset:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+  .pop{text-shadow:0 2px 0 rgba(0,0,0,.45)}
+
+  /* ---------- fake-ad chrome ---------- */
+  #adword{position:absolute;top:calc(env(safe-area-inset-top,0px) + 6px);left:0;right:0;text-align:center;
+    font-size:12px;letter-spacing:.06em;color:rgba(255,255,255,.55);pointer-events:none;z-index:6}
+  #brand{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:12px;z-index:7}
+  #logo{font-size:21px;line-height:1;font-weight:900;letter-spacing:-.5px;
+    color:#ffd83d;-webkit-text-stroke:0px;
+    text-shadow:0 0 0 #6b3b0d,2px 2px 0 #6b3b0d,-2px 2px 0 #6b3b0d,2px -2px 0 #6b3b0d,-2px -2px 0 #6b3b0d,0 5px 0 #a8560f,0 7px 8px rgba(0,0,0,.45)}
+  #logo small{display:block;font-size:9px;letter-spacing:.32em;color:#fff;
+    text-shadow:1px 1px 0 #6b3b0d,-1px 1px 0 #6b3b0d,1px -1px 0 #6b3b0d,-1px -1px 0 #6b3b0d;margin-top:3px}
+  #install{margin-top:9px;display:block;border:none;cursor:pointer;
+    font-family:inherit;font-weight:900;font-size:19px;letter-spacing:.04em;color:#fff;
+    padding:7px 18px 10px;border-radius:14px;
+    background:linear-gradient(#63c1ff,#2f8fe0);box-shadow:0 5px 0 #1d6bb0,0 8px 12px rgba(0,0,0,.35);
+    text-shadow:0 2px 0 rgba(0,0,0,.28);animation:breathe 2.4s ease-in-out infinite}
+  #install:active{transform:translateY(4px);box-shadow:0 1px 0 #1d6bb0}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+
+  #skip{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);right:14px;z-index:8;
+    width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+    background:rgba(20,14,6,.72);color:#fff;font-size:17px;display:grid;place-items:center}
+
+  /* ---------- resource pills ---------- */
+  #res{position:absolute;top:calc(env(safe-area-inset-top,0px) + 54px);right:14px;z-index:5;
+    display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .pill{position:relative;height:36px;min-width:126px;border-radius:18px;
+    background:linear-gradient(#3a2e20,#241a10);box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 3px 6px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:flex-end;padding:0 14px 0 40px;
+    font-size:20px;transition:transform .12s}
+  .pill.bump{transform:scale(1.12)}
+  .pill.hide{display:none}
+  .pill i{position:absolute;left:-5px;top:50%;transform:translateY(-50%);
+    width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:21px;font-style:normal;
+    background:linear-gradient(#f4f0e4,#cfc7b2);box-shadow:0 3px 5px rgba(0,0,0,.4),inset 0 2px 0 #fff}
+
+  /* ---------- bottom bar ---------- */
+  #bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;pointer-events:none}
+  #levelbar{height:12px;margin:0 0 0;background:rgba(0,0,0,.45)}
+  #levelfill{height:100%;width:0%;background:linear-gradient(90deg,#49b6ff,#8ee4ff);transition:width .3s}
+  #btmrow{display:flex;align-items:center;gap:10px;padding:8px 14px calc(env(safe-area-inset-bottom,0px) + 10px)}
+  .round{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+    background:rgba(20,14,6,.6);color:#fff;font-size:19px;display:grid;place-items:center}
+  #lvltxt{font-size:15px;color:rgba(255,255,255,.85);letter-spacing:.04em}
+
+  /* ---------- tutorial / toast ---------- */
+  #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:78px;z-index:6;
+    padding:9px 18px 11px;border-radius:15px;background:rgba(20,14,6,.8);font-size:15px;
+    text-align:center;max-width:78vw;opacity:0;transition:opacity .35s;pointer-events:none;line-height:1.35}
+  #hint.on{opacity:1}
+
+  /* ---------- modal ---------- */
+  #modal{position:absolute;inset:0;z-index:9;display:none;place-items:center;background:rgba(8,14,6,.72);padding:24px}
+  #modal.on{display:grid}
+  #card{width:min(420px,90vw);border-radius:24px;padding:26px 24px 22px;text-align:center;
+    background:linear-gradient(#fff8e6,#f2e3bf);color:#4a3418;box-shadow:0 14px 0 #c9a96a,0 22px 40px rgba(0,0,0,.5)}
+  #card h2{font-size:27px;margin-bottom:10px;color:#a8560f}
+  #card p{font-size:17px;line-height:1.5;font-weight:700;margin-bottom:8px}
+  #card .ok{margin-top:16px;border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:20px;color:#fff;
+    padding:11px 30px 14px;border-radius:15px;background:linear-gradient(#7ed34f,#4da32c);
+    box-shadow:0 5px 0 #34781d;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  #card .ok:active{transform:translateY(4px);box-shadow:0 1px 0 #34781d}
+  #card .sub{font-size:14px;opacity:.75;font-weight:700}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div id="adword" class="pop">ADVERTISEMENT</div>
+
+  <div id="brand">
+    <div id="logo" class="pop">HARVEST HERO<small>FARM TYCOON</small></div>
+    <button id="install">INSTALL</button>
+  </div>
+
+  <button id="skip" title="Skip ad">&#9654;&#9654;|</button>
+
+  <div id="res">
+    <div class="pill pop" id="p-coin"><i>&#128181;</i><span>0</span></div>
+    <div class="pill pop" id="p-wheat"><i>&#127806;</i><span>0</span></div>
+    <div class="pill pop hide" id="p-egg"><i>&#129370;</i><span>0</span></div>
+    <div class="pill pop hide" id="p-pie"><i>&#129383;</i><span>0</span></div>
+  </div>
+
+  <div id="hint" class="pop"></div>
+
+  <div id="bottom">
+    <div id="levelbar"><div id="levelfill"></div></div>
+    <div id="btmrow">
+      <button class="round" id="b-sound">&#128266;</button>
+      <button class="round" id="b-reset" title="Restart farm">&#8635;</button>
+      <div id="lvltxt" class="pop">FARM LEVEL 1</div>
+    </div>
+  </div>
+
+  <div id="modal"><div id="card">
+    <h2 id="m-title"></h2>
+    <div id="m-body"></div>
+    <button class="ok" id="m-ok">OK</button>
+  </div></div>
+</div>
+<script>
+'use strict';
+/* =========================================================================
+   HARVEST HERO — the idle farm game from the playable ad.
+   Single file, no dependencies, no build step. Canvas 2D isometric.
+   ========================================================================= */
+
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const TW = 74, TH = 37;                 // iso tile width / height in px
+let CW = 0, CH = 0, ZOOM = 1;
+
+const clamp = (v,a,b)=> v<a?a:v>b?b:v;
+const lerp  = (a,b,t)=> a+(b-a)*t;
+const rnd   = (a,b)=> a+Math.random()*(b-a);
+const dist2 = (ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;};
+const iso   = (x,y)=>({ sx:(x-y)*(TW/2), sy:(x+y)*(TH/2) });
+
+/* ---------------------------------------------------------------- world */
+const MAP   = { w:38, h:33 };
+const FIELD = { x:19, y:4, w:13, h:22 };          // wheat grid (near the camera)
+const ITEMS = {
+  wheat:{ label:'WHEAT', price:3,  col:'#f2c12e', col2:'#c98c10' },
+  egg:  { label:'EGGS',  price:11, col:'#fdfaf0', col2:'#cfc4a6' },
+  pie:  { label:'PIES',  price:34, col:'#e8b26a', col2:'#b8763a' },
+};
+
+/* Stations sit on the far (west) side so nothing ever hides the player.
+   Their trays are on the near (east) face, in front of the walls.        */
+const STATIONS = [
+  { id:'market', name:'MARKET', kind:'sell', unlocked:true,
+    b:{x:3,y:3,w:7,h:6}, roof:'#c0392b',
+    trays:[ {mode:'sell', x:10.2, y:3.6, w:2.0, h:4.8} ] },
+
+  { id:'coop', name:'CHICKEN COOP', kind:'make', unlocked:false,
+    b:{x:4,y:13,w:6,h:5}, roof:'#e08a2e',
+    recipe:{ in:{wheat:2}, out:'egg', time:1.5 },
+    trays:[ {mode:'in',  item:'wheat', x:10.2, y:12.9, w:2.0, h:2.2},
+            {mode:'out', item:'egg',   x:10.2, y:15.5, w:2.0, h:2.2} ] },
+
+  { id:'bakery', name:'BAKERY', kind:'make', unlocked:false,
+    b:{x:3,y:22,w:7,h:6}, roof:'#8e5bb5',
+    recipe:{ in:{wheat:2, egg:1}, out:'pie', time:2.2 },
+    trays:[ {mode:'in',  item:'wheat', x:10.2, y:21.8, w:2.0, h:2.0},
+            {mode:'in',  item:'egg',   x:10.2, y:24.0, w:2.0, h:2.0},
+            {mode:'out', item:'pie',   x:10.2, y:26.2, w:2.0, h:2.0} ] },
+];
+const TRAY_CAP = 24;
+
+/* Upgrade pads — stand on one and your coins pour in until it's paid off. */
+const PADS = [
+  { id:'scythe', name:'SCYTHE',        icon:'✂', x:14.6, y:6.0,  cost:20,  mul:1.7, max:8,
+    desc:l=>'Harvest speed '+(100+35*l)+'%', show:()=>true },
+  { id:'bag',    name:'BACKPACK',      icon:'\u{1F392}', x:17.4, y:9.4, cost:35, mul:1.8, max:8,
+    desc:l=>'Carry '+(12+6*l)+' items',      show:()=>true },
+  { id:'boots',  name:'BOOTS',         icon:'\u{1F462}', x:14.6, y:12.8, cost:70, mul:1.9, max:6,
+    desc:l=>'Move speed '+(100+14*l)+'%',    show:()=>G.earned>=70 },
+  { id:'field',  name:'FERTILIZER',    icon:'\u{1F331}', x:17.4, y:16.2, cost:110, mul:1.9, max:6,
+    desc:l=>'Wheat regrows '+(100+30*l)+'%', show:()=>G.earned>=150 },
+  { id:'coop',   name:'CHICKEN COOP',  icon:'\u{1F414}', x:14.6, y:19.6, cost:150, mul:1, max:1,
+    desc:()=>'Unlock the coop',              show:()=>G.earned>=150 },
+  { id:'hand',   name:'HIRE FARMHAND', icon:'\u{1F468}', x:17.4, y:23.0, cost:220, mul:2.0, max:5,
+    desc:l=>l+' farmhands working',          show:()=>G.up.coop>0 },
+  { id:'bakery', name:'BAKERY',        icon:'\u{1F967}', x:14.6, y:26.4, cost:650, mul:1, max:1,
+    desc:()=>'Unlock the bakery',            show:()=>G.up.coop>0 && G.earned>=600 },
+];
+
+/* ------------------------------------------------------------ game state */
+let G, field, actors, flyers, pops, puffs, coinFx, customers;
+
+function padCost(p){ const l=G.up[p.id]||0; return Math.round(p.cost*Math.pow(p.mul,l)); }
+function capacity(){ return 12 + 6*G.up.bag; }
+function harvestRate(){ return 2.6 * (1 + 0.35*G.up.scythe); }
+function yieldPer(){ return 1 + Math.floor(G.up.scythe/2); }
+function regrowTime(){ return 7 / (1 + 0.30*G.up.field); }
+function moveSpeed(){ return 4.4 * (1 + 0.14*G.up.boots); }
+function carried(a){ return a.carry.wheat + a.carry.egg + a.carry.pie; }
+
+function newActor(x,y,hand){
+  return { x, y, vx:0, vy:0, face:2.2, bob:0, hand:!!hand,
+           carry:{wheat:0,egg:0,pie:0}, cut:0, state:'seek', target:null, wait:0,
+           tint: hand ? ['#4e7fd4','#d4684e','#5fb04e','#b45fd4','#d4a44e'][((typeof actors!=='undefined'&&actors)?actors.length:0)%5] : '#e2574c' };
+}
+
+function resetGame(){
+  G = { coins:25, earned:0, level:1, up:{scythe:0,bag:0,boots:0,field:0,coop:0,hand:0,bakery:0},
+        paid:{}, hands:0, t:0, sound:true, seenHint:{}, won:false };
+  for(const p of PADS) G.paid[p.id]=0;
+
+  field = [];
+  for(let j=0;j<FIELD.h;j++) for(let i=0;i<FIELD.w;i++)
+    field.push({ x:FIELD.x+i+0.5, y:FIELD.y+j+0.5, ripe:true, t:0, seed:Math.random()*6.28, grow:1 });
+
+  for(const s of STATIONS){
+    s.unlocked = (s.id==='market');
+    s.timer = 0;
+    s.bin = {wheat:0, egg:0, pie:0};
+    s.pend = {wheat:0, egg:0, pie:0};
+    s.out = 0;
+  }
+  actors  = [ newActor(16.0, 11.4, false) ];
+  flyers = []; pops = []; puffs = []; coinFx = []; customers = [];
+  for(let i=0;i<7;i++) customers.push(newCustomer(i));
+  shake = 0;
+  save();
+}
+const player = ()=> actors[0];
+
+/* -------------------------------------------------------------- customers
+   Cosmetic villagers queuing at the market — pure life, like in the ad.   */
+function newCustomer(i){
+  return { t:rnd(0,1), speed:rnd(.32,.46), off:rnd(-.5,.5), lane:i%3,
+           want:['wheat','egg','pie'][i%3], tint:['#4e7fd4','#d4684e','#5fb04e','#e0b23c','#9b59b6','#16a085','#e67e22'][i%7] };
+}
+function customerPos(c){
+  // walks a lane from the south road up to the market counter, then loops
+  const t = c.t;
+  const x = 33.4 + c.lane*0.85 + c.off;
+  const y = lerp(31, 3.5, t);
+  return { x, y };
+}
+
+/* -------------------------------------------------------------- persistence */
+const SAVE_KEY = 'harvest-hero-v1';
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({
+    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
+    sound:G.sound, seenHint:G.seenHint, won:G.won })); }catch(e){}
+}
+function load(){
+  let d=null; try{ d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){}
+  if(!d) return;
+  G.coins=d.coins|0; G.earned=d.earned|0; G.hands=d.hands|0;
+  Object.assign(G.up, d.up||{}); Object.assign(G.paid, d.paid||{});
+  G.sound = d.sound!==false; G.seenHint = d.seenHint||{}; G.won=!!d.won;
+  G.level = 1; while(G.earned >= levelReq(G.level)) G.level++;
+  for(const s of STATIONS) if(s.id!=='market') s.unlocked = (G.up[s.id]||0)>0;
+  for(let i=0;i<G.hands;i++) actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true));
+}
+
+/* -------------------------------------------------------------- audio */
+let AC=null;
+function beep(freq, dur, type, vol, slide){
+  if(!G.sound) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.type=type||'square'; o.frequency.setValueAtTime(freq, AC.currentTime);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40,slide), AC.currentTime+dur);
+    g.gain.setValueAtTime(0.0001, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol||0.05, AC.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+dur);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+dur+0.02);
+  }catch(e){}
+}
+const sfx = {
+  cut:  ()=>beep(rnd(280,340), .07, 'sawtooth', .035, 140),
+  pick: ()=>beep(rnd(620,760), .06, 'triangle', .04),
+  coin: ()=>beep(rnd(880,1180), .09, 'square', .035, 1500),
+  buy:  ()=>{ beep(523,.1,'square',.06); setTimeout(()=>beep(659,.1,'square',.06),90);
+              setTimeout(()=>beep(784,.18,'square',.06),180); },
+  levelup: ()=>{ beep(660,.1,'triangle',.07); setTimeout(()=>beep(880,.2,'triangle',.07),110); },
+};
+
+/* -------------------------------------------------------------- input */
+const keys = {};
+addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true;
+  if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase())) e.preventDefault(); });
+addEventListener('keyup',   e=>{ keys[e.key.toLowerCase()]=false; });
+
+const stick = { on:false, id:null, ox:0, oy:0, x:0, y:0, dx:0, dy:0 };
+function stickStart(id,x,y){ stick.on=true; stick.id=id; stick.ox=x; stick.oy=y; stick.x=x; stick.y=y; if(AC&&AC.state==='suspended')AC.resume(); }
+function stickMove(x,y){
+  stick.x=x; stick.y=y;
+  let dx=x-stick.ox, dy=y-stick.oy;
+  const R=70, m=Math.hypot(dx,dy);
+  if(m>R){ stick.ox += dx*(1-R/m); stick.oy += dy*(1-R/m); dx*=R/m; dy*=R/m; }
+  stick.dx=dx/R; stick.dy=dy/R;
+}
+function stickEnd(){ stick.on=false; stick.id=null; stick.dx=0; stick.dy=0; }
+
+cvs.addEventListener('pointerdown', e=>{ cvs.setPointerCapture(e.pointerId); stickStart(e.pointerId,e.clientX,e.clientY); });
+cvs.addEventListener('pointermove', e=>{ if(stick.on && e.pointerId===stick.id) stickMove(e.clientX,e.clientY); });
+cvs.addEventListener('pointerup',     e=>{ if(e.pointerId===stick.id) stickEnd(); });
+cvs.addEventListener('pointercancel', e=>{ if(e.pointerId===stick.id) stickEnd(); });
+
+/* screen-space input vector -> world-space direction (isometric) */
+function inputDir(){
+  let sx=0, sy=0;
+  if(keys['a']||keys['arrowleft'])  sx-=1;
+  if(keys['d']||keys['arrowright']) sx+=1;
+  if(keys['w']||keys['arrowup'])    sy-=1;
+  if(keys['s']||keys['arrowdown'])  sy+=1;
+  if(sx||sy){ const m=Math.hypot(sx,sy); sx/=m; sy/=m; }
+  else if(stick.on){ sx=stick.dx; sy=stick.dy; const m=Math.hypot(sx,sy); if(m>1){sx/=m;sy/=m;} }
+  if(!sx && !sy) return {x:0,y:0,m:0};
+  const wx = sx/(TW/2) + sy/(TH/2);
+  const wy = sy/(TH/2) - sx/(TW/2);
+  const wm = Math.hypot(wx,wy);
+  const m  = Math.min(1, Math.hypot(sx,sy));
+  return { x:wx/wm, y:wy/wm, m };
+}
+
+/* =======================================================================
+   UPDATE
+   ===================================================================== */
+let shake = 0, hintTimer = 0;
+const IO_INTERVAL = 0.06;
+
+function inRect(a, r){ return a.x>r.x && a.x<r.x+r.w && a.y>r.y && a.y<r.y+r.h; }
+function rectCenter(r){ return { x:r.x+r.w/2, y:r.y+r.h/2 }; }
+function station(id){ return STATIONS.find(s=>s.id===id); }
+
+function collide(a){
+  for(const s of STATIONS){
+    if(!s.unlocked) continue;
+    const b=s.b, r=0.45;
+    if(a.x>b.x-r && a.x<b.x+b.w+r && a.y>b.y-r && a.y<b.y+b.h+r){
+      const dl=a.x-(b.x-r), dr=(b.x+b.w+r)-a.x, du=a.y-(b.y-r), dd=(b.y+b.h+r)-a.y;
+      const m=Math.min(dl,dr,du,dd);
+      if(m===dl) a.x=b.x-r; else if(m===dr) a.x=b.x+b.w+r;
+      else if(m===du) a.y=b.y-r; else a.y=b.y+b.h+r;
+    }
+  }
+  a.x = clamp(a.x, 1, MAP.w-1.2);
+  a.y = clamp(a.y, 1, MAP.h-1.2);
+}
+
+function moveActor(a, dx, dy, mag, dt){
+  const sp = moveSpeed() * (a.hand?0.88:1) * mag;
+  const ax = dx*sp, ay = dy*sp;
+  a.vx = lerp(a.vx, ax, 1-Math.pow(0.0008, dt));
+  a.vy = lerp(a.vy, ay, 1-Math.pow(0.0008, dt));
+  a.x += a.vx*dt; a.y += a.vy*dt;
+  collide(a);
+  const spd = Math.hypot(a.vx,a.vy);
+  if(spd>0.25){
+    a.bob += dt*spd*3.4;
+    const want = Math.atan2(a.vy, a.vx);
+    let d = want - a.face;
+    while(d> Math.PI) d-=Math.PI*2;
+    while(d<-Math.PI) d+=Math.PI*2;
+    a.face += d * (1-Math.pow(0.0001, dt));
+  } else a.bob = lerp(a.bob, 0, 1-Math.pow(0.001,dt));
+  a.moving = spd>0.25;
+}
+
+function tileAt(x,y){
+  const i=Math.floor(x-FIELD.x), j=Math.floor(y-FIELD.y);
+  if(i<0||j<0||i>=FIELD.w||j>=FIELD.h) return null;
+  return field[j*FIELD.w+i];
+}
+
+function actorCap(a){ return a.hand ? 12 + 3*G.up.bag : capacity(); }
+function reach(){ return 0.75 + 0.15*G.up.scythe; }
+
+function tilesAround(x, y, R){
+  const out = [];
+  const i0=Math.max(0,Math.floor(x-R-FIELD.x)), i1=Math.min(FIELD.w-1,Math.floor(x+R-FIELD.x));
+  const j0=Math.max(0,Math.floor(y-R-FIELD.y)), j1=Math.min(FIELD.h-1,Math.floor(y+R-FIELD.y));
+  for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){
+    const t = field[j*FIELD.w+i];
+    if(dist2(x,y,t.x,t.y) <= R*R) out.push(t);
+  }
+  return out;
+}
+
+function tryHarvest(a, dt){
+  const R = reach();
+  const room = actorCap(a) - carried(a);
+  const near = tilesAround(a.x, a.y, R).filter(t=>t.ripe);
+  if(!near.length){ a.cut = 0; return false; }
+  if(room <= 0){
+    if(!a.hand) hint('bagfull', 'BAG FULL \u2014 go sell it!');
+    a.cut = 0; return false;
+  }
+  a.cut += dt * harvestRate() * (a.hand?0.8:1);
+  if(a.cut < 1) return false;
+  a.cut = 0;
+
+  near.sort((p,q)=> dist2(a.x,a.y,p.x,p.y) - dist2(a.x,a.y,q.x,q.y));
+  const per = yieldPer();
+  let gained = 0;
+  for(const t of near){
+    if(gained + per > room && gained > 0) break;
+    t.ripe = false; t.grow = 0; t.t = regrowTime()*rnd(0.8,1.2);
+    const g = Math.min(per, room - gained);
+    gained += g;
+    for(let i=0;i<4;i++) puffs.push({x:t.x, y:t.y, z:0.2, vx:rnd(-1,1), vy:rnd(-1,1), vz:rnd(1.4,2.6),
+      t:0, life:rnd(.35,.6), col:'#f7d24a', r:rnd(2,4)});
+    if(gained >= room) break;
+  }
+  a.carry.wheat += gained;
+  if(!a.hand && gained>0){
+    sfx.cut();
+    pops.push({x:a.x, y:a.y, z:1.0, t:0, txt:'+'+gained, col:'#ffe066'});
+    hint('sell','Bag getting full? Sell it at the MARKET up north');
+  }
+  return true;
+}
+
+function trayWorld(s, tr){ return { x:tr.x+tr.w/2, y:tr.y+tr.h/2 }; }
+
+function itemFlyer(item, from, to, onDone){
+  flyers.push({ item, x0:from.x, y0:from.y, x1:to.x, y1:to.y, t:0, dur:0.34,
+                h:rnd(1.6,2.4), spin:rnd(-6,6), onDone });
+}
+
+/* interaction with station trays: unload / pick up / sell */
+function tryStations(a, dt){
+  a.ioT = (a.ioT||0) + dt;
+  for(const s of STATIONS){
+    if(!s.unlocked) continue;
+    for(const tr of s.trays){
+      if(!inRect(a, tr)) continue;
+
+      if(tr.mode==='sell'){
+        if(carried(a)<=0) continue;
+        while(a.ioT >= IO_INTERVAL && carried(a)>0){
+          a.ioT -= IO_INTERVAL;
+          const it = a.carry.pie>0 ? 'pie' : a.carry.egg>0 ? 'egg' : 'wheat';
+          a.carry[it]--;
+          const price = ITEMS[it].price;
+          const p = {x:a.x, y:a.y};
+          itemFlyer(it, p, rectCenter({x:s.b.x,y:s.b.y,w:s.b.w,h:s.b.h}), ()=>{
+            G.coins += price; G.earned += price;
+            spawnCoinFx(); sfx.coin();
+            pops.push({x:a.x,y:a.y,z:1.3,t:0,txt:'+'+price,col:'#7dff8d'});
+            happyCustomer(it);
+            checkLevel();
+          });
+        }
+        hint('pad','Coins pay for UPGRADES — stand on a glowing pad');
+        return;
+      }
+
+      if(tr.mode==='in'){
+        const it = tr.item;
+        if(a.carry[it]<=0 || s.bin[it]+s.pend[it]>=TRAY_CAP) continue;
+        while(a.ioT >= IO_INTERVAL && a.carry[it]>0 && s.bin[it]+s.pend[it]<TRAY_CAP){
+          a.ioT -= IO_INTERVAL;
+          a.carry[it]--; s.pend[it]++;
+          const p={x:a.x,y:a.y}, dst=trayWorld(s,tr);
+          itemFlyer(it, p, dst, ()=>{ s.pend[it]--; s.bin[it]++; });
+          if(!a.hand) sfx.pick();
+        }
+        return;
+      }
+
+      if(tr.mode==='out'){
+        const it = tr.item;
+        if(s.out<=0 || carried(a)>=actorCap(a)) continue;
+        while(a.ioT >= IO_INTERVAL && s.out>0 && carried(a)<actorCap(a)){
+          a.ioT -= IO_INTERVAL;
+          s.out--;
+          const src=trayWorld(s,tr);
+          a.carry[it]++;
+          itemFlyer(it, src, {x:a.x,y:a.y}, null);
+          if(!a.hand) sfx.pick();
+        }
+        return;
+      }
+    }
+  }
+  if(a.ioT > 0.5) a.ioT = 0;
+}
+
+function produce(dt){
+  for(const s of STATIONS){
+    if(!s.unlocked || s.kind!=='make') continue;
+    const r = s.recipe;
+    const has = Object.keys(r.in).every(k => s.bin[k] >= r.in[k]);
+    if(has && s.out < TRAY_CAP){
+      s.timer += dt;
+      if(s.timer >= r.time){
+        s.timer = 0;
+        for(const k in r.in) s.bin[k] -= r.in[k];
+        s.out++;
+        const c = {x:s.b.x+s.b.w/2, y:s.b.y+s.b.h/2};
+        puffs.push({x:c.x,y:c.y,z:2.2,vx:0,vy:0,vz:1.6,t:0,life:.5,col:'#ffffff',r:5});
+      }
+    } else s.timer = Math.min(s.timer, r.time);
+  }
+}
+
+/* ------------------------------------------------------------ upgrade pads */
+function visiblePads(){ return PADS.filter(p => (G.up[p.id]||0) < p.max && p.show()); }
+
+function updatePads(dt){
+  const a = player();
+  for(const p of PADS){
+    p.active = false;
+    if((G.up[p.id]||0) >= p.max || !p.show()) continue;
+    if(dist2(a.x,a.y,p.x,p.y) < 1.1*1.1){
+      p.active = true;
+      const cost = padCost(p);
+      const need = cost - G.paid[p.id];
+      if(G.coins > 0 && need > 0){
+        const rate = Math.max(14, (cost/1.8) * (0.4 + 1.2*(G.paid[p.id]/cost)));
+        const amt = Math.min(rate*dt, G.coins, need);
+        G.coins -= amt; G.paid[p.id] += amt;
+        p.pulse = (p.pulse||0) + dt*14;
+        if(!p.sT || G.t-p.sT>0.09){ p.sT=G.t; beep(300+520*(G.paid[p.id]/cost), .05, 'square', .03); }
+        if(G.paid[p.id] >= cost-0.001) buyPad(p);
+      }
+    }
+  }
+}
+
+function buyPad(p){
+  G.paid[p.id] = 0;
+  G.up[p.id] = (G.up[p.id]||0) + 1;
+  sfx.buy(); shake = 9;
+  pops.push({x:p.x, y:p.y, z:2.0, t:0, txt:p.name+'!', col:'#8ef07a', big:true});
+  for(let i=0;i<26;i++) puffs.push({x:p.x,y:p.y,z:.4,vx:rnd(-3,3),vy:rnd(-3,3),vz:rnd(2,5.5),
+    t:0,life:rnd(.5,1),col:['#ffe066','#8ef07a','#6fd0ff','#ff9de0'][i%4],r:rnd(2.5,5)});
+
+  if(p.id==='coop'  ){ station('coop').unlocked=true;
+    hint('coopdone','COOP OPEN — drop wheat in the feed tray, collect the eggs', true); }
+  if(p.id==='bakery'){ station('bakery').unlocked=true;
+    hint('bakedone','BAKERY OPEN — wheat + eggs → pies. Pies are worth a fortune.', true); }
+  if(p.id==='hand'  ){ G.hands++; actors.push(newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true));
+    hint('handdone','A farmhand joined! They harvest and haul for you.', true); }
+  save();
+}
+
+/* ------------------------------------------------------------ farmhand AI */
+function deliveryTarget(){
+  let best = null, bestFill = 1e9;
+  for(const id of ['coop','bakery']){
+    const st = station(id);
+    if(!st.unlocked) continue;
+    const fill = st.bin.wheat + st.pend.wheat;
+    if(fill >= TRAY_CAP-2) continue;
+    if(fill < bestFill){ bestFill = fill; best = st.trays.find(t=>t.mode==='in' && t.item==='wheat'); }
+  }
+  return best || station('market').trays[0];
+}
+
+function updateHand(a, dt){
+  a.think = (a.think||0) - dt;
+
+  if(a.state==='seek'){
+    if(carried(a) >= actorCap(a)){ a.state='deliver'; a.target=null; a.think=0; }
+    else {
+      if(!a.target || a.think<=0 || !a.target.ripe){
+        a.think = 0.5;
+        let best=null, bd=1e9;
+        for(const t of field){
+          if(!t.ripe) continue;
+          let d = dist2(a.x,a.y,t.x,t.y);
+          for(const o of actors) if(o!==a && o.target===t) d += 30;
+          if(d<bd){ bd=d; best=t; }
+        }
+        a.target = best;
+      }
+      if(a.target){
+        const dx=a.target.x-a.x, dy=a.target.y-a.y, m=Math.hypot(dx,dy);
+        if(m>0.28) moveActor(a, dx/m, dy/m, 1, dt);
+        else { moveActor(a,0,0,0,dt); tryHarvest(a, dt); }
+      } else moveActor(a,0,0,0,dt);
+    }
+  } else {
+    if(carried(a) <= 0){ a.state='seek'; a.target=null; a.think=0; return; }
+    if(!a.tray || a.think<=0){ a.think=1.2; a.tray = deliveryTarget(); }
+    const c = rectCenter(a.tray);
+    const dx=c.x-a.x, dy=c.y-a.y, m=Math.hypot(dx,dy);
+    if(m>0.2) moveActor(a, dx/m, dy/m, 1, dt);
+    else moveActor(a,0,0,0,dt);
+    tryStations(a, dt);
+  }
+}
+
+/* ------------------------------------------------------------ fx + level */
+function spawnCoinFx(){
+  const a = player();
+  const p = worldToScreen(a.x, a.y, 1.1);
+  const pill = document.getElementById('p-coin').getBoundingClientRect();
+  coinFx.push({ x:p.x, y:p.y, x1:pill.left+24, y1:pill.top+pill.height/2,
+                cx:p.x+rnd(-90,90), cy:p.y-rnd(90,190), t:0, dur:rnd(.45,.62), r:rnd(9,13) });
+}
+
+function levelReq(n){ return Math.round(60*Math.pow(n,1.75)); }
+function checkLevel(){
+  while(G.earned >= levelReq(G.level)){
+    G.level++; sfx.levelup(); shake=Math.max(shake,7);
+    pops.push({x:player().x, y:player().y, z:2.4, t:0, txt:'LEVEL '+G.level+'!', col:'#6fd0ff', big:true});
+    if(G.level>=12 && !G.won){ G.won=true; winModal(); }
+    save();
+  }
+}
+
+function happyCustomer(item){
+  const c = customers.find(c=>c.want===item && c.t>0.72);
+  if(c){ c.happy = 1; c.t = 0; c.want = ['wheat','egg','pie'][Math.floor(rnd(0,3))]; }
+}
+
+/* ------------------------------------------------------------ main update */
+function update(dt){
+  G.t += dt;
+  const a = player();
+  const d = inputDir();
+  moveActor(a, d.x, d.y, d.m, dt);
+  tryHarvest(a, dt);
+  tryStations(a, dt);
+  for(let i=1;i<actors.length;i++) updateHand(actors[i], dt);
+
+  produce(dt);
+  updatePads(dt);
+
+  for(const t of field){
+    if(!t.ripe){ t.t -= dt; if(t.t<=0){ t.ripe=true; t.grow=0; } }
+    else if(t.grow<1) t.grow = Math.min(1, t.grow + dt*2.4);
+  }
+
+  for(let i=flyers.length-1;i>=0;i--){
+    const f=flyers[i]; f.t += dt/f.dur;
+    if(f.t>=1){ if(f.onDone) f.onDone(); flyers.splice(i,1); }
+  }
+  for(let i=pops.length-1;i>=0;i--){ const p=pops[i]; p.t+=dt; if(p.t>1.1) pops.splice(i,1); }
+  for(let i=puffs.length-1;i>=0;i--){
+    const p=puffs[i]; p.t+=dt;
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; p.vz-=9*dt;
+    if(p.t>p.life) puffs.splice(i,1);
+  }
+  for(let i=coinFx.length-1;i>=0;i--){ const c=coinFx[i]; c.t+=dt/c.dur; if(c.t>=1){ bumpPill('p-coin'); coinFx.splice(i,1);} }
+
+  for(const c of customers){
+    c.t += dt*c.speed*0.12;
+    if(c.happy){ c.happy-=dt; if(c.happy<0) c.happy=0; }
+    if(c.t>1){ c.t = 0; c.off = rnd(-.5,.5); }
+  }
+
+  shake = Math.max(0, shake - dt*26);
+  hintTimer = Math.max(0, hintTimer - dt);
+  if(hintTimer===0) document.getElementById('hint').classList.remove('on');
+
+  // camera
+  const ip = iso(a.x, a.y);
+  cam.x = lerp(cam.x, ip.sx, 1-Math.pow(0.0015, dt));
+  cam.y = lerp(cam.y, ip.sy, 1-Math.pow(0.0015, dt));
+
+  syncHUD();
+  if((G.t|0)!==lastSave && (G.t|0)%5===0){ lastSave=G.t|0; save(); }
+}
+let lastSave = 0;
+
+/* =======================================================================
+   RENDER
+   ===================================================================== */
+const cam = { x:0, y:0 };
+let DPR = 1;
+
+function resize(){
+  CW = innerWidth; CH = innerHeight;
+  DPR = Math.min(devicePixelRatio||1, 2);
+  cvs.width = CW*DPR; cvs.height = CH*DPR;
+  ZOOM = clamp(Math.min(CW/760, CH/1150)*1.32, 0.42, 1.15);
+}
+addEventListener('resize', resize);
+
+function worldToScreen(x,y,z){
+  const p = iso(x,y);
+  return { x:(p.sx-cam.x)*ZOOM + CW/2, y:(p.sy - (z||0)*TH*0.9 - cam.y)*ZOOM + CH/2 };
+}
+
+function quad(x,y,w,h,fill,alpha){
+  const a=iso(x,y), b=iso(x+w,y), c=iso(x+w,y+h), d=iso(x,y+h);
+  ctx.globalAlpha = alpha===undefined?1:alpha;
+  ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.lineTo(c.sx,c.sy); ctx.lineTo(d.sx,d.sy); ctx.closePath();
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function poly(pts, fill, stroke, lw){
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();
+  if(fill){ ctx.fillStyle=fill; ctx.fill(); }
+  if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=lw||2; ctx.lineJoin='round'; ctx.stroke(); }
+}
+
+/* deterministic scenery */
+let decor = [];
+function buildDecor(){
+  decor = [];
+  let seed = 1337;
+  const rr = ()=> (seed = (seed*1664525+1013904223)%4294967296) / 4294967296;
+  const blocked = (x,y)=>{
+    if(x>FIELD.x-1.5 && x<FIELD.x+FIELD.w+1.5 && y>FIELD.y-1.5 && y<FIELD.y+FIELD.h+1.5) return true;
+    if(x>9.8 && x<18.4) return true;                        // the yard + pad lane
+    for(const s of STATIONS){ const b=s.b; if(x>b.x-2&&x<b.x+b.w+2&&y>b.y-2&&y<b.y+b.h+2) return true; }
+    if(x>32.4) return true;                                 // village road
+    return false;
+  };
+  for(let i=0;i<900;i++){
+    const x = rr()*MAP.w, y = rr()*MAP.h;
+    if(blocked(x,y)) continue;
+    const k = rr();
+    decor.push({ x, y, kind: k<0.46?'tree' : k<0.72?'bale' : k<0.86?'bush' : 'rock',
+                 s: 0.8+rr()*0.5, ph: rr()*6.28 });
+  }
+}
+
+function drawGround(){
+  quad(0,0,MAP.w,MAP.h, '#6ab043');
+  for(let j=0;j<MAP.h;j+=2) quad(0,j,MAP.w,1, '#72b748');
+  quad(10.4, 1.4, 8.2, MAP.h-3, '#cba46a');                 // yard + upgrade lane
+  quad(10.4, 1.4, 8.2, MAP.h-3, '#000', 0.05);
+  quad(FIELD.x-1, FIELD.y-1, FIELD.w+2, FIELD.h+2, '#a9793f');
+  quad(FIELD.x-1, FIELD.y-1, FIELD.w+2, FIELD.h+2, '#000', 0.06);
+  quad(33.0, 2.5, 3.6, MAP.h-4, '#d8c48d');                 // village road
+  for(const s of STATIONS){ if(!s.unlocked) continue; quad(s.b.x-0.7,s.b.y-0.7,s.b.w+1.4,s.b.h+1.4,'#b99257'); }
+}
+
+let view = {x0:-1e9,x1:1e9,y0:-1e9,y1:1e9};
+function visible(p, m){ m=m||90; return p.sx>view.x0-m && p.sx<view.x1+m && p.sy>view.y0-m && p.sy<view.y1+m; }
+
+const STALK = [[-12,3],[-5,7],[2,2],[9,6],[-1,-2]];
+const _vis = [];
+function drawField(){
+  _vis.length = 0;
+  for(const t of field){
+    const p = iso(t.x, t.y);
+    if(visible(p)) _vis.push([t, p.sx, p.sy]);
+  }
+  // ripe stalks — one path, one stroke
+  ctx.strokeStyle='#c9991c'; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath();
+  for(const v of _vis){
+    const t=v[0]; if(!t.ripe) continue;
+    for(let k=0;k<5;k++){
+      const ox=STALK[k][0], oy=STALK[k][1];
+      const sway = Math.sin(G.t*1.6 + t.seed + k*0.5)*2.8;
+      const h = (19 + (k*7)%6) * t.grow;
+      ctx.moveTo(v[1]+ox, v[2]+oy);
+      ctx.quadraticCurveTo(v[1]+ox+sway*.4, v[2]+oy-h*.6, v[1]+ox+sway, v[2]+oy-h);
+    }
+  }
+  ctx.stroke();
+  // grain heads — one path, one fill
+  ctx.fillStyle='#f2cc3f';
+  ctx.beginPath();
+  for(const v of _vis){
+    const t=v[0]; if(!t.ripe) continue;
+    for(let k=0;k<5;k++){
+      const ox=STALK[k][0], oy=STALK[k][1];
+      const sway = Math.sin(G.t*1.6 + t.seed + k*0.5)*2.8;
+      const h = (19 + (k*7)%6) * t.grow;
+      for(let i=0;i<3;i++){
+        const cx = v[1]+ox+sway*(1-i*0.18), cy = v[2]+oy-h+i*3.6+1;
+        const rx = 2.6*t.grow, ry = 4.0*t.grow;
+        ctx.moveTo(cx+rx, cy);
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, 6.29);
+      }
+    }
+  }
+  ctx.fill();
+  // stubble on cut tiles
+  ctx.strokeStyle='#96742f'; ctx.lineWidth=2.4;
+  ctx.beginPath();
+  for(const v of _vis){
+    if(v[0].ripe) continue;
+    for(let k=0;k<3;k++){
+      const ox=STALK[k][0], oy=STALK[k][1];
+      ctx.moveTo(v[1]+ox, v[2]+oy); ctx.lineTo(v[1]+ox, v[2]+oy-5);
+    }
+    ctx.moveTo(v[1]+2, v[2]+4); ctx.lineTo(v[1]+11, v[2]+2);
+  }
+  ctx.stroke();
+}
+
+function fenceLine(x0,y0,x1,y1){
+  const n = Math.max(2, Math.round(Math.hypot(x1-x0,y1-y0)*0.8));
+  for(let i=0;i<=n;i++){
+    const p = iso(lerp(x0,x1,i/n), lerp(y0,y1,i/n));
+    ctx.fillStyle='#8a5a2b';
+    ctx.fillRect(p.sx-2.5, p.sy-24, 5, 26);
+    ctx.fillStyle='#a9703a';
+    ctx.fillRect(p.sx-2.5, p.sy-24, 5, 4);
+  }
+  const a=iso(x0,y0), b=iso(x1,y1);
+  ctx.strokeStyle='#a9703a'; ctx.lineWidth=4; ctx.lineCap='round';
+  for(const dy of [-19,-9]){ ctx.beginPath(); ctx.moveTo(a.sx,a.sy+dy); ctx.lineTo(b.sx,b.sy+dy); ctx.stroke(); }
+}
+
+function drawDecorItem(d){
+  const p = iso(d.x, d.y), s = d.s;
+  if(!visible(p,120)) return;
+  ctx.globalAlpha=.22; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(p.sx, p.sy, 16*s, 8*s, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+  if(d.kind==='tree'){
+    const sway = Math.sin(G.t*0.9 + d.ph)*3;
+    ctx.fillStyle='#7a4a22'; ctx.fillRect(p.sx-5*s, p.sy-30*s, 10*s, 30*s);
+    ctx.fillStyle='#3f8f36';
+    ctx.beginPath(); ctx.ellipse(p.sx+sway, p.sy-52*s, 30*s, 26*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#4fae43';
+    ctx.beginPath(); ctx.ellipse(p.sx-9*s+sway, p.sy-60*s, 20*s, 17*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#63c455';
+    ctx.beginPath(); ctx.ellipse(p.sx+10*s+sway, p.sy-64*s, 14*s, 12*s, 0,0,6.29); ctx.fill();
+  } else if(d.kind==='bale'){
+    ctx.fillStyle='#e0a83c'; roundRect(p.sx-18*s, p.sy-26*s, 36*s, 26*s, 8*s); ctx.fill();
+    ctx.fillStyle='#c98f26'; roundRect(p.sx-18*s, p.sy-10*s, 36*s, 10*s, 5*s); ctx.fill();
+    ctx.strokeStyle='#a8750f'; ctx.lineWidth=2*s;
+    ctx.beginPath(); ctx.moveTo(p.sx-6*s,p.sy-26*s); ctx.lineTo(p.sx-6*s,p.sy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.sx+6*s,p.sy-26*s); ctx.lineTo(p.sx+6*s,p.sy); ctx.stroke();
+  } else if(d.kind==='bush'){
+    ctx.fillStyle='#478f3a';
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy-10*s, 18*s, 13*s,0,0,6.29); ctx.fill();
+    ctx.fillStyle='#58a846';
+    ctx.beginPath(); ctx.ellipse(p.sx-5*s, p.sy-16*s, 12*s, 9*s,0,0,6.29); ctx.fill();
+  } else {
+    ctx.fillStyle='#9aa0a6';
+    poly([[p.sx-14*s,p.sy],[p.sx-7*s,p.sy-14*s],[p.sx+6*s,p.sy-16*s],[p.sx+14*s,p.sy]], '#9aa0a6');
+    poly([[p.sx-7*s,p.sy-14*s],[p.sx+6*s,p.sy-16*s],[p.sx+14*s,p.sy],[p.sx+2*s,p.sy-4*s]], '#b6bcc2');
+  }
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+function drawBuilding(s){
+  const b = s.b, H = 74, RH = 40;
+  const N=iso(b.x,b.y), E=iso(b.x+b.w,b.y), S=iso(b.x+b.w,b.y+b.h), W=iso(b.x,b.y+b.h);
+  const up=(p,h)=>[p.sx, p.sy-h];
+  // shadow
+  ctx.globalAlpha=.25; ctx.fillStyle='#000';
+  poly([[N.sx,N.sy+6],[E.sx+8,E.sy+6],[S.sx,S.sy+8],[W.sx-8,W.sy+6]],'#000'); ctx.globalAlpha=1;
+  // walls
+  poly([up(W,0),up(S,0),up(S,H),up(W,H)], '#f0e2c6');          // front-left
+  poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#d8c8a8');          // front-right
+  // door
+  const dc = iso(b.x, b.y+b.h/2);
+  ctx.fillStyle='#8a5a2b'; roundRect(dc.sx-16, dc.sy-58, 32, 52, 6); ctx.fill();
+  ctx.fillStyle='#6d4520'; roundRect(dc.sx-12, dc.sy-53, 24, 47, 5); ctx.fill();
+  // gable roof
+  const along = b.w>=b.h;
+  let R1,R2,f1,f2;
+  if(along){
+    R1=[iso(b.x,b.y+b.h/2).sx, iso(b.x,b.y+b.h/2).sy-H-RH];
+    R2=[iso(b.x+b.w,b.y+b.h/2).sx, iso(b.x+b.w,b.y+b.h/2).sy-H-RH];
+    f1=[up(N,H),up(E,H),R2,R1]; f2=[up(W,H),up(S,H),R2,R1];
+  } else {
+    R1=[iso(b.x+b.w/2,b.y).sx, iso(b.x+b.w/2,b.y).sy-H-RH];
+    R2=[iso(b.x+b.w/2,b.y+b.h).sx, iso(b.x+b.w/2,b.y+b.h).sy-H-RH];
+    f1=[up(N,H),up(W,H),R2,R1]; f2=[up(E,H),up(S,H),R2,R1];
+  }
+  poly(f1, shade(s.roof,-28), '#00000022', 2);
+  poly(f2, s.roof, '#00000022', 2);
+  ctx.globalAlpha=.16; poly(f2.map(p=>p), '#fff'); ctx.globalAlpha=1;
+  // sign
+  const top = iso(b.x+b.w/2, b.y+b.h/2);
+  signBoard(top.sx, top.sy-H-RH-26, s.name);
+}
+
+function shade(hex, amt){
+  const n = parseInt(hex.slice(1),16);
+  const r=clamp(((n>>16)&255)+amt,0,255), g=clamp(((n>>8)&255)+amt,0,255), b=clamp((n&255)+amt,0,255);
+  return 'rgb('+r+','+g+','+b+')';
+}
+
+function signBoard(sx, sy, text){
+  ctx.font = '900 19px system-ui, sans-serif';
+  const w = ctx.measureText(text).width + 26;
+  ctx.fillStyle='#000'; ctx.globalAlpha=.2; roundRect(sx-w/2+3, sy-15, w, 32, 10); ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle='#fff8e6'; roundRect(sx-w/2, sy-18, w, 32, 10); ctx.fill();
+  ctx.strokeStyle='#c9a96a'; ctx.lineWidth=3; roundRect(sx-w/2, sy-18, w, 32, 10); ctx.stroke();
+  ctx.fillStyle='#7a4f1d'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text, sx, sy);
+}
+
+/* ------------------------------------------------------------ items */
+function drawItem(kind, x, y, s){
+  s = s||1;
+  if(kind==='wheat'){
+    ctx.strokeStyle='#d9a41c'; ctx.lineWidth=2.4*s; ctx.lineCap='round';
+    for(let k=-1;k<=1;k++){
+      ctx.beginPath(); ctx.moveTo(x, y+7*s); ctx.lineTo(x+k*5*s, y-9*s); ctx.stroke();
+      ctx.fillStyle='#f7d54a';
+      ctx.beginPath(); ctx.ellipse(x+k*5*s, y-10*s, 3.4*s, 5.4*s, k*0.3, 0, 6.29); ctx.fill();
+    }
+    ctx.strokeStyle='#b5771a'; ctx.lineWidth=2.6*s;
+    ctx.beginPath(); ctx.moveTo(x-5*s,y+2*s); ctx.lineTo(x+5*s,y+2*s); ctx.stroke();
+  } else if(kind==='egg'){
+    ctx.fillStyle='#fffdf4';
+    ctx.beginPath(); ctx.ellipse(x, y, 6*s, 7.6*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#e3dcc6';
+    ctx.beginPath(); ctx.ellipse(x+2*s, y+1.5*s, 3*s, 4*s, 0,0,6.29); ctx.fill();
+  } else {
+    ctx.fillStyle='#c98244';
+    ctx.beginPath(); ctx.ellipse(x, y+2*s, 10*s, 6*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#eab473';
+    ctx.beginPath(); ctx.ellipse(x, y-1*s, 9.5*s, 6*s, 0,0,6.29); ctx.fill();
+    ctx.strokeStyle='#c98244'; ctx.lineWidth=1.6*s;
+    for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(x-8*s+k*0, y-3*s+k*3*s); ctx.lineTo(x+8*s, y-3*s+k*3*s); ctx.stroke(); }
+  }
+}
+
+/* ------------------------------------------------------------ trays */
+function drawTray(s, tr){
+  const col = tr.mode==='in' ? '#3f8ad8' : tr.mode==='out' ? '#3fb85e' : '#e0a400';
+  const pulse = 0.5 + 0.5*Math.sin(G.t*3);
+  quad(tr.x, tr.y, tr.w, tr.h, '#000', .18);
+  quad(tr.x+.08, tr.y+.08, tr.w-.16, tr.h-.16, col, .55+0.18*pulse);
+  const c = rectCenter(tr), p = iso(c.x, c.y);
+
+  if(tr.mode==='sell'){
+    ctx.font='900 26px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.strokeStyle='#8a5a00'; ctx.lineWidth=5;
+    ctx.strokeText('SELL', p.sx, p.sy-6); ctx.fillText('SELL', p.sx, p.sy-6);
+    const shown = ['wheat'].concat(station('coop').unlocked?['egg']:[], station('bakery').unlocked?['pie']:[]);
+    ctx.font='900 14px system-ui,sans-serif'; ctx.fillStyle='#fff'; ctx.lineWidth=4;
+    shown.forEach((k,i)=>{
+      const x = p.sx + (i-(shown.length-1)/2)*54;
+      drawItem(k, x-11, p.sy+18, .8);
+      ctx.strokeText('$'+ITEMS[k].price, x+11, p.sy+18);
+      ctx.fillText('$'+ITEMS[k].price, x+11, p.sy+18);
+    });
+    return;
+  }
+  const n = tr.mode==='in' ? s.bin[tr.item] : s.out;
+  for(let i=0;i<Math.min(n,18);i++){
+    const col2 = i%3, row = Math.floor(i/3);
+    drawItem(tr.item, p.sx + (col2-1)*15, p.sy + 4 - row*7 - (row%2)*2, 0.85);
+  }
+  ctx.font='900 17px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#fff'; ctx.strokeStyle='#00000066'; ctx.lineWidth=4;
+  const lbl = (tr.mode==='in'?'FEED ':'TAKE ') + n;
+  ctx.strokeText(lbl, p.sx, p.sy+24); ctx.fillText(lbl, p.sx, p.sy+24);
+}
+
+/* ------------------------------------------------------------ pads */
+function drawPadGround(p){
+  const lv = G.up[p.id]||0;
+  if(lv>=p.max || !p.show()) return;
+  const pulse = 0.5+0.5*Math.sin(G.t*4 + p.x);
+  quad(p.x-1.05, p.y-1.05, 2.1, 2.1, '#000', .2);
+  quad(p.x-1, p.y-1, 2, 2, p.active ? '#ffe680' : '#6fd0ff', p.active? .55+.25*pulse : .3+.12*pulse);
+}
+
+function drawPadPanel(p){
+  const lv = G.up[p.id]||0;
+  if(lv>=p.max || !p.show()) return;
+  const cost = padCost(p), paid = G.paid[p.id], f = clamp(paid/cost,0,1);
+  const s = iso(p.x, p.y);
+  if(!visible(s,200)) return;
+  const W = 120, H = 72, y0 = s.sy - 116;
+  ctx.globalAlpha=.85;
+  ctx.fillStyle='#2a1c0e'; roundRect(s.sx-W/2, y0, W, H, 14); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.strokeStyle = p.active? '#ffe680':'#6fd0ff'; ctx.lineWidth=3;
+  roundRect(s.sx-W/2, y0, W, H, 14); ctx.stroke();
+
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='23px system-ui,sans-serif'; ctx.fillText(p.icon, s.sx, y0+19);
+  ctx.font='900 13px system-ui,sans-serif'; ctx.fillStyle='#fff';
+  ctx.fillText(p.name, s.sx, y0+36);
+  ctx.font='700 10px system-ui,sans-serif'; ctx.fillStyle='#cdbfa8';
+  ctx.fillText(p.desc(lv+1), s.sx, y0+49);
+
+  // cost bar
+  const bw=W-24, bx=s.sx-bw/2, by=y0+H-16;
+  ctx.fillStyle='#000'; roundRect(bx,by,bw,13,7); ctx.fill();
+  ctx.fillStyle='#ffd23d'; roundRect(bx,by,Math.max(6,bw*f),13,7); ctx.fill();
+  ctx.font='900 12px system-ui,sans-serif'; ctx.fillStyle= f>0.5?'#4a3418':'#fff';
+  ctx.fillText('$'+Math.ceil(cost-paid), s.sx, by+6.5);
+  // stem
+  ctx.strokeStyle= p.active? '#ffe680':'#6fd0ff'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(s.sx, y0+H); ctx.lineTo(s.sx, s.sy-10); ctx.stroke();
+}
+
+/* ------------------------------------------------------------ people */
+function drawPerson(a, sx, sy, tint, opts){
+  opts = opts||{};
+  const bob = Math.sin(a.bob*2)*3, step = Math.sin(a.bob*4);
+  const flip = Math.cos(a.face) - Math.sin(a.face) < 0 ? -1 : 1;  // screen-facing
+  ctx.globalAlpha=.25; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7.5, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+
+  // legs
+  ctx.fillStyle='#3c5fa0';
+  roundRect(sx-9, sy-16+ (a.moving? Math.max(0,step)*-3:0), 8, 18, 4); ctx.fill();
+  roundRect(sx+1, sy-16+ (a.moving? Math.max(0,-step)*-3:0), 8, 18, 4); ctx.fill();
+  // torso
+  ctx.fillStyle=tint; roundRect(sx-12, sy-40+bob, 24, 27, 9); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.22)'; roundRect(sx-12, sy-40+bob, 24, 9, 6); ctx.fill();
+  // arms
+  ctx.fillStyle=tint;
+  roundRect(sx-16, sy-38+bob+(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
+  roundRect(sx+9,  sy-38+bob-(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
+  // head
+  const hy = sy-50+bob;
+  ctx.fillStyle='#f4c79c'; ctx.beginPath(); ctx.arc(sx, hy, 11.5, 0, 6.29); ctx.fill();
+  ctx.fillStyle=opts.hair||'#5b3a1c';
+  ctx.beginPath(); ctx.arc(sx, hy-2, 11.5, Math.PI*1.03, Math.PI*2.05); ctx.fill();
+  ctx.fillStyle='#3a2a1a';
+  ctx.beginPath(); ctx.arc(sx+flip*2-3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx+flip*2+3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  ctx.strokeStyle='#b5745a'; ctx.lineWidth=1.6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(sx+flip*2, hy+4.5, 3.2, 0.35, Math.PI-0.35); ctx.stroke();
+
+  // scythe swing while cutting
+  if(a.cut>0){
+    const ang = -0.9 + Math.sin(G.t*13)*0.75;
+    ctx.save(); ctx.translate(sx+flip*13, sy-28+bob); ctx.rotate(ang*flip); ctx.scale(flip,1);
+    ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,8); ctx.lineTo(0,-22); ctx.stroke();
+    ctx.strokeStyle='#d8dde2'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.arc(-14,-20, 15, -0.2, 1.25); ctx.stroke();
+    ctx.restore();
+  }
+
+  // carried stack
+  const order = ['wheat','egg','pie'];
+  const total = carried(a), SHOW = 9, STEP = 8.5;
+  let idx = 0;
+  for(const k of order){
+    for(let i=0;i<a.carry[k];i++){
+      if(idx>=SHOW) break;
+      const wob = Math.sin(G.t*6 + idx*0.6)*1.5 + (a.moving? Math.sin(a.bob*4+idx)*1.1:0);
+      drawItem(k, sx+wob, sy-62+bob-idx*STEP, 0.9);
+      idx++;
+    }
+  }
+  if(total>SHOW){
+    const ty = sy-62+bob-SHOW*STEP-6;
+    ctx.font='900 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.strokeStyle='#00000099'; ctx.lineWidth=4;
+    ctx.strokeText('+'+(total-SHOW), sx, ty); ctx.fillText('+'+(total-SHOW), sx, ty);
+  }
+}
+
+function drawCustomer(c){
+  const pos = customerPos(c), p = iso(pos.x, pos.y);
+  const fake = { bob:G.t*5 + c.off*6, moving:true, face:2.2, cut:0, carry:{wheat:0,egg:0,pie:0} };
+  drawPerson(fake, p.sx, p.sy, c.tint, {hair:'#3d2a16'});
+  if(c.t>0.35){
+    const bx=p.sx+22, by=p.sy-78;
+    ctx.fillStyle='#fff'; roundRect(bx-24,by-18,48,34,12); ctx.fill();
+    poly([[bx-8,by+14],[bx+2,by+14],[bx-8,by+24]], '#fff');
+    drawItem(c.want, bx-6, by, .8);
+    ctx.font='900 15px system-ui,sans-serif'; ctx.fillStyle='#4a3418'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText('x'+(1+(c.lane)), bx+6, by);
+  }
+}
+
+/* ------------------------------------------------------------ frame */
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,CW,CH);
+  const g = ctx.createLinearGradient(0,0,0,CH);
+  g.addColorStop(0,'#8fd45c'); g.addColorStop(1,'#59a03a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+
+  const shx = shake? rnd(-shake,shake):0, shy = shake? rnd(-shake,shake):0;
+  ctx.save();
+  ctx.translate(CW/2+shx, CH/2+shy); ctx.scale(ZOOM,ZOOM); ctx.translate(-cam.x,-cam.y);
+  view = { x0:cam.x-CW/(2*ZOOM), x1:cam.x+CW/(2*ZOOM), y0:cam.y-CH/(2*ZOOM), y1:cam.y+CH/(2*ZOOM) };
+
+  drawGround();
+  drawField();
+
+  // fences around the field
+  fenceLine(FIELD.x-1, FIELD.y-1, FIELD.x+FIELD.w+1, FIELD.y-1);
+  fenceLine(FIELD.x-1, FIELD.y-1, FIELD.x-1, FIELD.y+FIELD.h+1);
+  fenceLine(FIELD.x+FIELD.w+1, FIELD.y-1, FIELD.x+FIELD.w+1, FIELD.y+FIELD.h+1);
+
+  for(const s of STATIONS){ if(s.unlocked) for(const tr of s.trays) drawTray(s, tr); }
+  for(const p of PADS) drawPadGround(p);
+
+  // depth-sorted entities
+  const list = [];
+  for(const d of decor) list.push({ d:d.x+d.y, f:()=>drawDecorItem(d) });
+  for(const s of STATIONS){ if(s.unlocked) list.push({ d:(s.b.x+s.b.w/2)+(s.b.y+s.b.h/2), f:()=>drawBuilding(s) }); }
+  for(const a of actors){
+    const p = iso(a.x,a.y);
+    list.push({ d:a.x+a.y+0.01, f:()=>drawPerson(a, p.sx, p.sy, a.tint, {hair:a.hand?'#2e2016':'#7a4a1e'}) });
+  }
+  for(const c of customers){ const pos=customerPos(c); list.push({ d:pos.x+pos.y, f:()=>drawCustomer(c) }); }
+  for(const f of flyers){
+    const x = lerp(f.x0,f.x1,f.t), y = lerp(f.y0,f.y1,f.t);
+    const z = Math.sin(f.t*Math.PI)*f.h + 0.6;
+    const p = iso(x,y);
+    list.push({ d:x+y+0.4, f:()=>{ ctx.save(); ctx.translate(p.sx, p.sy - z*TH*0.9); ctx.rotate(f.t*f.spin); drawItem(f.item,0,0,1); ctx.restore(); } });
+  }
+  list.sort((a,b)=>a.d-b.d);
+  for(const e of list) e.f();
+
+  for(const p of PADS) drawPadPanel(p);
+
+  // particles + popups on top
+  for(const p of puffs){
+    const s = iso(p.x,p.y);
+    ctx.globalAlpha = clamp(1-p.t/p.life,0,1);
+    ctx.fillStyle=p.col;
+    ctx.beginPath(); ctx.arc(s.sx, s.sy - p.z*TH*0.9, p.r, 0, 6.29); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  for(const p of pops){
+    const s = iso(p.x,p.y), k = p.t/1.1;
+    ctx.globalAlpha = clamp(1.6-k*1.6,0,1);
+    ctx.font = '900 '+(p.big?34:24)+'px system-ui,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    const yy = s.sy - p.z*TH*0.9 - k*54;
+    ctx.strokeStyle='#00000099'; ctx.lineWidth=6; ctx.strokeText(p.txt, s.sx, yy);
+    ctx.fillStyle=p.col; ctx.fillText(p.txt, s.sx, yy);
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+
+  // ---- screen space ----
+  for(const c of coinFx){
+    const t=c.t, mt=1-t;
+    const x = mt*mt*c.x + 2*mt*t*c.cx + t*t*c.x1;
+    const y = mt*mt*c.y + 2*mt*t*c.cy + t*t*c.y1;
+    ctx.fillStyle='#4caf50'; ctx.strokeStyle='#2e7d32'; ctx.lineWidth=2;
+    roundRect(x-c.r, y-c.r*0.68, c.r*2, c.r*1.36, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#a5e8a8'; ctx.beginPath(); ctx.arc(x,y,c.r*0.35,0,6.29); ctx.fill();
+  }
+  if(stick.on){
+    ctx.globalAlpha=.3; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(stick.ox, stick.oy, 66, 0, 6.29); ctx.fill();
+    ctx.globalAlpha=.55; ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(stick.ox+stick.dx*60, stick.oy+stick.dy*60, 30, 0, 6.29); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+/* =======================================================================
+   HUD / UI
+   ===================================================================== */
+const el = id=>document.getElementById(id);
+const hudVal = {};
+function setPill(id, v, show){
+  const node = el(id);
+  node.classList.toggle('hide', !show);
+  if(hudVal[id]===v) return;
+  hudVal[id]=v;
+  node.querySelector('span').textContent = v;
+  bumpPill(id);
+}
+function bumpPill(id){
+  const n = el(id); n.classList.remove('bump');
+  void n.offsetWidth; n.classList.add('bump');
+  setTimeout(()=>n.classList.remove('bump'), 130);
+}
+function syncHUD(){
+  const a = player();
+  setPill('p-coin', Math.floor(G.coins), true);
+  setPill('p-wheat', a.carry.wheat, true);
+  setPill('p-egg', a.carry.egg, station('coop').unlocked);
+  setPill('p-pie', a.carry.pie, station('bakery').unlocked);
+  const prev = levelReq(G.level-1), next = levelReq(G.level);
+  el('levelfill').style.width = clamp((G.earned-prev)/(next-prev)*100,0,100)+'%';
+  el('lvltxt').textContent = 'FARM LEVEL '+G.level+'  ·  $'+Math.floor(G.earned)+' EARNED';
+}
+
+function hint(key, text, force){
+  if(G.seenHint[key] && !force) return;
+  G.seenHint[key]=1;
+  el('hint').textContent = text;
+  el('hint').classList.add('on');
+  hintTimer = 5;
+}
+
+function modal(title, html, btn){
+  el('m-title').textContent = title;
+  el('m-body').innerHTML = html;
+  el('m-ok').textContent = btn||'OK';
+  el('modal').classList.add('on');
+}
+el('m-ok').onclick = ()=>{ el('modal').classList.remove('on'); if(pendingReset){ pendingReset=false; doReset(); } };
+let pendingReset = false;
+
+function winModal(){
+  modal('FARM LEVEL 12!',
+    '<p>You built the whole farm. Wheat, eggs, pies, staff — the lot.</p>'+
+    '<p>And here is the twist: <b>this is the full game.</b> No install, no timers, no 3-day wheat.</p>'+
+    '<p class="sub">Keep playing — the pads go higher.</p>', 'NICE');
+}
+
+el('install').onclick = ()=>{
+  modal('Already installed ✨',
+    '<p>You are playing the game from the ad. That IS the product.</p>'+
+    '<p>No 47-hour build timers, no gem shop, no "the real game is a match-3".</p>'+
+    '<p class="sub">Bookmark the tab. That is the install button.</p>', 'BACK TO THE FARM');
+};
+el('skip').onclick = ()=>{
+  modal('Skip to what?',
+    '<p>There is no app store page behind this. The ad and the game are the same thing.</p>'+
+    '<p class="sub">Awkward, right?</p>', 'FINE');
+};
+el('b-sound').onclick = ()=>{
+  G.sound = !G.sound;
+  el('b-sound').innerHTML = G.sound ? '&#128266;' : '&#128263;';
+  save();
+};
+el('b-reset').onclick = ()=>{
+  pendingReset = true;
+  modal('Start a fresh farm?', '<p>This wipes your coins, upgrades and farmhands.</p>', 'WIPE IT');
+};
+function doReset(){
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  const snd = G.sound;
+  resetGame(); G.sound = snd;
+  buildDecor();
+  cam.x = iso(player().x, player().y).sx; cam.y = iso(player().x, player().y).sy;
+  hint('move','Drag anywhere to move. Sweep through the wheat!', true);
+}
+
+/* =======================================================================
+   BOOT
+   ===================================================================== */
+function init(){
+  let raw=null; try{ raw = localStorage.getItem(SAVE_KEY); }catch(e){}
+  resetGame();
+  if(raw){ try{ localStorage.setItem(SAVE_KEY, raw); }catch(e){} load(); }
+  buildDecor();
+  resize();
+  const p = iso(player().x, player().y); cam.x=p.sx; cam.y=p.sy;
+  el('b-sound').innerHTML = G.sound ? '&#128266;' : '&#128263;';
+  syncHUD();
+  hint('move','Drag anywhere to move. Sweep through the wheat!');
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now-last)/1000);
+  last = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+init();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
