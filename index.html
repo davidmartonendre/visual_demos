@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Harvest Hero</title>
+<meta name="description" content="A cosy isometric farm tycoon: sweep the wheat, haul the harvest, build up the farm.">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#1b2a14;
+    font-family:"Baloo 2",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-weight:800;color:#fff;user-select:none;touch-action:none}
+  #wrap{position:fixed;inset:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+  .pop{text-shadow:0 2px 0 rgba(0,0,0,.45)}
+
+  /* ---------- resource pills ---------- */
+  #res{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;z-index:5;
+    display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .pill{position:relative;height:36px;min-width:126px;border-radius:18px;
+    background:linear-gradient(#3a2e20,#241a10);box-shadow:inset 0 2px 0 rgba(255,255,255,.12),0 3px 6px rgba(0,0,0,.4);
+    display:flex;align-items:center;justify-content:flex-end;padding:0 14px 0 40px;
+    font-size:20px;transition:transform .12s}
+  .pill.bump{transform:scale(1.12)}
+  .pill.hide{display:none}
+  .pill i{position:absolute;left:-5px;top:50%;transform:translateY(-50%);
+    width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:21px;font-style:normal;
+    background:linear-gradient(#f4f0e4,#cfc7b2);box-shadow:0 3px 5px rgba(0,0,0,.4),inset 0 2px 0 #fff}
+
+  /* ---------- bottom bar ---------- */
+  #bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;pointer-events:none}
+  #levelbar{height:12px;margin:0 0 0;background:rgba(0,0,0,.45)}
+  #levelfill{height:100%;width:0%;background:linear-gradient(90deg,#49b6ff,#8ee4ff);transition:width .3s}
+  #btmrow{display:flex;align-items:center;gap:8px;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+  .round{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+    background:rgba(20,14,6,.6);color:#fff;font-size:19px;display:grid;place-items:center}
+  #lvltxt{font-size:14px;white-space:nowrap;color:rgba(255,255,255,.85);letter-spacing:.04em}
+
+  /* ---------- tutorial / toast ---------- */
+  #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:78px;z-index:6;
+    padding:9px 18px 11px;border-radius:15px;background:rgba(20,14,6,.8);font-size:15px;
+    text-align:center;max-width:78vw;opacity:0;transition:opacity .35s;pointer-events:none;line-height:1.35}
+  #hint.on{opacity:1}
+
+  /* ---------- story chapter ---------- */
+  #chapter{position:absolute;left:50%;transform:translate(-50%,16px);z-index:7;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 74px);
+    width:min(370px,88vw);padding:12px 15px 14px;border-radius:18px;
+    background:linear-gradient(#fffaf0,#f0e2c2);color:#4a3418;
+    box-shadow:0 8px 0 #c9a96a,0 14px 24px rgba(0,0,0,.45);
+    opacity:0;pointer-events:none;transition:opacity .4s,transform .4s}
+  #chapter.on{opacity:1;transform:translate(-50%,0)}
+  #chapter .ch-h{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  #chapter .ch-i{font-size:24px}
+  #chapter .ch-t{font-size:17px;font-weight:900;color:#a8560f;letter-spacing:.01em}
+  #chapter .ch-b{font-size:13.5px;font-weight:700;line-height:1.42}
+
+  /* ---------- journal ---------- */
+  #jrn{text-align:left;max-height:54vh;overflow-y:auto}
+  #jrn .e{padding:10px 0;border-bottom:1px solid rgba(122,79,29,.18)}
+  #jrn .e:last-child{border-bottom:none}
+  #jrn .e b{display:block;font-size:15px;color:#a8560f;margin-bottom:3px}
+  #jrn .e span{font-size:13.5px;font-weight:700;line-height:1.45;display:block}
+  #jrn .lock{opacity:.45;font-style:italic}
+
+  /* ---------- modal ---------- */
+  #modal{position:absolute;inset:0;z-index:9;display:none;place-items:center;background:rgba(8,14,6,.72);padding:24px}
+  #modal.on{display:grid}
+  #card{width:min(420px,90vw);border-radius:24px;padding:26px 24px 22px;text-align:center;
+    background:linear-gradient(#fff8e6,#f2e3bf);color:#4a3418;box-shadow:0 14px 0 #c9a96a,0 22px 40px rgba(0,0,0,.5)}
+  #card h2{font-size:27px;margin-bottom:10px;color:#a8560f}
+  #card p{font-size:17px;line-height:1.5;font-weight:700;margin-bottom:8px}
+  #card .ok{margin-top:16px;border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:20px;color:#fff;
+    padding:11px 30px 14px;border-radius:15px;background:linear-gradient(#7ed34f,#4da32c);
+    box-shadow:0 5px 0 #34781d;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  #card .ok:active{transform:translateY(4px);box-shadow:0 1px 0 #34781d}
+  #card .sub{font-size:14px;opacity:.75;font-weight:700}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div id="res">
+    <div class="pill pop" id="p-coin"><i>&#128181;</i><span>0</span></div>
+  </div>
+
+  <div id="chapter"><div class="ch-h"><div class="ch-i"></div><div class="ch-t"></div></div><div class="ch-b"></div></div>
+
+  <div id="hint" class="pop"></div>
+
+  <div id="bottom">
+    <div id="levelbar"><div id="levelfill"></div></div>
+    <div id="btmrow">
+      <button class="round" id="b-sound">&#128266;</button>
+      <button class="round" id="b-journal" title="Journal">&#128214;</button>
+      <button class="round" id="b-reset" title="Restart farm">&#8635;</button>
+      <div id="lvltxt" class="pop">FARM LEVEL 1</div>
+    </div>
+  </div>
+
+  <div id="modal"><div id="card">
+    <h2 id="m-title"></h2>
+    <div id="m-body"></div>
+    <button class="ok" id="m-ok">OK</button>
+  </div></div>
+</div>
+<script>
+'use strict';
+/* =========================================================================
+   HARVEST HERO — an idle isometric farm tycoon.
+   Single file, no dependencies, no build step. Canvas 2D isometric.
+   ========================================================================= */
+
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const TW = 74, TH = 37;                 // iso tile width / height in px
+let CW = 0, CH = 0, ZOOM = 1;
+
+const clamp = (v,a,b)=> v<a?a:v>b?b:v;
+const lerp  = (a,b,t)=> a+(b-a)*t;
+const rnd   = (a,b)=> a+Math.random()*(b-a);
+const dist2 = (ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;};
+const iso   = (x,y)=>({ sx:(x-y)*(TW/2), sy:(x+y)*(TH/2) });
+function fmt(n){
+  n = Math.floor(n);
+  if(n >= 1e6) return (n/1e6).toFixed(n>=1e7?0:1)+'M';
+  if(n >= 1e4) return (n/1e3).toFixed(n>=1e5?0:1)+'k';
+  return String(n);
+}
+
+/* ---------------------------------------------------------------- world */
+const MAP = { w:40, h:52 };
+
+/* Eight goods, three production chains:
+     wheat -> flour -> (with egg) pie
+     wheat -> egg / milk -> cheese
+     apple -> jam                                                          */
+const ITEM_ORDER = ['wheat','apple','flour','egg','milk','jam','cheese','pie'];
+const ITEMS = {
+  wheat: { label:'WHEAT',  price:3,  pill:'\u{1F33E}' },
+  apple: { label:'APPLES', price:7,  pill:'\u{1F34E}' },
+  flour: { label:'FLOUR',  price:9,  pill:'\u{1F35A}' },
+  egg:   { label:'EGGS',   price:11, pill:'\u{1F95A}' },
+  milk:  { label:'MILK',   price:16, pill:'\u{1F95B}' },
+  jam:   { label:'JAM',    price:34, pill:'\u{1F353}' },
+  cheese:{ label:'CHEESE', price:52, pill:'\u{1F9C0}' },
+  pie:   { label:'PIES',   price:46, pill:'\u{1F967}' },
+};
+const emptyBag = ()=>{ const o={}; for(const k of ITEM_ORDER) o[k]=0; return o; };
+
+/* Things you harvest by walking through them. */
+const PATCHES = [
+  { id:'field',   item:'wheat', kind:'crop', cell:1.0, regrow:7,  yieldMul:1, gate:null,
+    rect:{ x:19, y:4,  w:13, h:24 } },
+  { id:'orchard', item:'apple', kind:'tree', cell:2.6, regrow:14, yieldMul:3, gate:'orchard',
+    rect:{ x:19, y:31, w:13, h:13 } },
+];
+
+/* Stations sit on the far (west) side so nothing ever hides the player.
+   Their trays are on the near (east) face, in front of the walls.        */
+const STATIONS = [
+  { id:'market', name:'MARKET', kind:'sell', unlocked:true, motif:'flag',
+    b:{x:3,y:3,w:7,h:5}, roof:'#c0392b',
+    trays:[ {mode:'sell', x:10.2, y:3.4, w:2.0, h:4.2} ] },
+
+  { id:'windmill', name:'WINDMILL', kind:'make', unlocked:false, motif:'sails',
+    b:{x:4,y:11,w:6,h:4}, roof:'#5b8ec4',
+    recipe:{ in:{wheat:2}, out:'flour', time:1.2 },
+    trays:[ {mode:'in',  item:'wheat', x:10.2, y:10.9, w:2.0, h:1.9},
+            {mode:'out', item:'flour', x:10.2, y:13.1, w:2.0, h:1.9} ] },
+
+  { id:'coop', name:'CHICKEN COOP', kind:'make', unlocked:false, motif:'perch',
+    b:{x:4,y:17,w:6,h:4}, roof:'#e08a2e',
+    recipe:{ in:{wheat:2}, out:'egg', time:1.5 },
+    trays:[ {mode:'in',  item:'wheat', x:10.2, y:16.9, w:2.0, h:1.9},
+            {mode:'out', item:'egg',   x:10.2, y:19.1, w:2.0, h:1.9} ] },
+
+  { id:'dairy', name:'DAIRY BARN', kind:'make', unlocked:false, motif:'silo',
+    b:{x:4,y:23,w:6,h:4}, roof:'#b0453a',
+    recipe:{ in:{wheat:3}, out:'milk', time:1.8 },
+    trays:[ {mode:'in',  item:'wheat', x:10.2, y:22.9, w:2.0, h:1.9},
+            {mode:'out', item:'milk',  x:10.2, y:25.1, w:2.0, h:1.9} ] },
+
+  { id:'cheese', name:'CHEESE CELLAR', kind:'make', unlocked:false, motif:'vent',
+    b:{x:4,y:29,w:6,h:4}, roof:'#d9a441',
+    recipe:{ in:{milk:2}, out:'cheese', time:2.4 },
+    trays:[ {mode:'in',  item:'milk',   x:10.2, y:28.9, w:2.0, h:1.9},
+            {mode:'out', item:'cheese', x:10.2, y:31.1, w:2.0, h:1.9} ] },
+
+  { id:'bakery', name:'BAKERY', kind:'make', unlocked:false, motif:'chimney',
+    b:{x:3,y:35,w:7,h:5}, roof:'#8e5bb5',
+    recipe:{ in:{flour:1, egg:1}, out:'pie', time:2.6 },
+    trays:[ {mode:'in',  item:'flour', x:10.2, y:34.9, w:2.0, h:1.9},
+            {mode:'in',  item:'egg',   x:10.2, y:37.1, w:2.0, h:1.9},
+            {mode:'out', item:'pie',   x:10.2, y:39.3, w:2.0, h:1.9} ] },
+
+  { id:'jam', name:'JAM KITCHEN', kind:'make', unlocked:false, motif:'chimney',
+    b:{x:4,y:43,w:6,h:4}, roof:'#c2447a',
+    recipe:{ in:{apple:3}, out:'jam', time:2.2 },
+    trays:[ {mode:'in',  item:'apple', x:10.2, y:42.9, w:2.0, h:1.9},
+            {mode:'out', item:'jam',   x:10.2, y:45.1, w:2.0, h:1.9} ] },
+];
+const TRAY_CAP = 50;
+
+/* The roadside farm stand. Villagers queue here and pay over the odds for
+   whatever they happen to want; the market takes anything at list price. */
+const STALL = { x:33.2, y:5.4, w:2.4, h:2.0 };
+const STAND = { x:33.0, y:7.8, w:2.6, h:2.9 };
+const QUEUE = [ {x:34.3,y:11.4}, {x:34.3,y:13.1}, {x:34.3,y:14.8} ];
+const STAND_BONUS = 1.7;
+const standPrice = k => Math.round(ITEMS[k].price * STAND_BONUS);
+
+/* The town order board: bundles for the village, paid well above list. */
+const BOARD = { x:10.4, y:0.6, w:2.2, h:2.2 };
+const ORDER_BONUS = 2.3;
+
+/* Upgrade pads — stand on one and your coins pour in until it's paid off. */
+const PADS = [
+  { id:'scythe', name:'SCYTHE',       icon:'\u2702',     x:14.6, y:5.0,  cost:26,   mul:2.05, max:8,
+    desc:l=>'Harvest speed '+(100+35*l)+'%', show:()=>true },
+  { id:'bag',    name:'BACKPACK',     icon:'\u{1F392}', x:17.4, y:8.6,  cost:22,   mul:1.34, max:20,
+    desc:l=>'Carry '+capAt(l)+' items',      show:()=>true },
+  { id:'boots',  name:'BOOTS',        icon:'\u{1F462}', x:14.6, y:12.2, cost:70,   mul:1.9,  max:8,
+    desc:l=>'Move speed '+(100+15*l)+'%',    show:()=>G.earned>=70 },
+  { id:'windmill',name:'WINDMILL',    icon:'\u{1F3ED}', x:17.4, y:15.8, cost:130,  mul:1,    max:1,
+    desc:()=>'Wheat \u2192 flour',            show:()=>G.earned>=120 },
+  { id:'field',  name:'FERTILIZER',   icon:'\u{1F331}', x:14.6, y:19.4, cost:180,  mul:1.9,  max:6,
+    desc:l=>'Crops regrow '+(100+30*l)+'%',  show:()=>G.earned>=200 },
+  { id:'coop',   name:'CHICKEN COOP', icon:'\u{1F414}', x:17.4, y:23.0, cost:300,  mul:1,    max:1,
+    desc:()=>'Wheat \u2192 eggs',             show:()=>G.up.windmill>0 },
+  { id:'hand',   name:'HIRE FARMHAND',icon:'\u{1F468}', x:14.6, y:26.6, cost:360,  mul:2.0,  max:6,
+    desc:l=>l+' farmhands working',          show:()=>G.up.coop>0 },
+  { id:'bakery', name:'BAKERY',       icon:'\u{1F967}', x:17.4, y:30.2, cost:1000, mul:1,    max:1,
+    desc:()=>'Flour + eggs \u2192 pies',      show:()=>G.up.coop>0 && G.earned>=900 },
+  { id:'crew',   name:'HIRE ARTISANS',icon:'\u{1F9D1}', x:14.6, y:33.8, cost:900, mul:1.85, max:8,
+    desc:l=>'Workshops make '+(1+l)+' per batch', show:()=>G.up.windmill>0 && G.earned>=800 },
+  { id:'dairy',  name:'DAIRY BARN',   icon:'\u{1F404}', x:17.4, y:37.4, cost:1800, mul:1,    max:1,
+    desc:()=>'Wheat \u2192 milk',             show:()=>G.up.bakery>0 },
+  { id:'cheese', name:'CHEESE CELLAR',icon:'\u{1F9C0}', x:14.6, y:41.0, cost:3200, mul:1,    max:1,
+    desc:()=>'Milk \u2192 cheese',            show:()=>G.up.dairy>0 },
+  { id:'orchard',name:'PLANT ORCHARD',icon:'\u{1F34E}', x:17.4, y:44.6, cost:4200, mul:1,    max:1,
+    desc:()=>'An apple grove to pick',       show:()=>G.up.dairy>0 },
+  { id:'jam',    name:'JAM KITCHEN',  icon:'\u{1F353}', x:14.6, y:48.2, cost:6500, mul:1,    max:1,
+    desc:()=>'Apples \u2192 jam',             show:()=>G.up.orchard>0 },
+];
+const UPGRADE_IDS = PADS.map(p=>p.id);
+
+/* ------------------------------------------------------------ game state */
+let G, actors, flyers, pops, puffs, coinFx, customers;
+
+function padCost(p){ const l=G.up[p.id]||0; return Math.round(p.cost*Math.pow(p.mul,l)); }
+function capAt(l){ return 12 + 10*l + 2*l*l; }   // 12, 24, 40, 60, 84 ... 1012
+function capacity(){ return capAt(G.up.bag); }
+function harvestRate(){ return 2.6 * (1 + 0.35*G.up.scythe); }
+function yieldPer(){ return 1 + Math.floor(G.up.scythe/2); }
+function regrowTime(p){ return p.regrow / (1 + 0.30*G.up.field); }
+function moveSpeed(){ return 5.0 * (1 + 0.15*G.up.boots); }
+function carried(a){ let n=0; for(const k of ITEM_ORDER) n += a.carry[k]; return n; }
+function patchOpen(p){ return !p.gate || G.up[p.gate] > 0; }
+
+function newActor(x,y,hand){
+  return { x, y, vx:0, vy:0, face:2.2, bob:0, hand:!!hand,
+           carry:emptyBag(), cut:0, state:'seek', target:null, wait:0,
+           tint: hand ? ['#4e7fd4','#d4684e','#5fb04e','#b45fd4','#d4a44e'][((typeof actors!=='undefined'&&actors)?actors.length:0)%5] : '#e2574c' };
+}
+
+function resetGame(){
+  G = { coins:25, earned:0, level:1, up:{}, paid:{}, hands:0, t:0,
+        sound:true, seenHint:{}, won:false, story:{}, journal:[], orders:[] };
+  for(const id of UPGRADE_IDS) G.up[id] = 0;
+  for(const p of PADS) G.paid[p.id]=0;
+
+  for(const p of PATCHES){
+    p.cols = Math.floor(p.rect.w / p.cell);
+    p.rows = Math.floor(p.rect.h / p.cell);
+    p.nodes = [];
+    for(let j=0;j<p.rows;j++) for(let i=0;i<p.cols;i++)
+      p.nodes.push({ x:p.rect.x + (i+0.5)*p.cell, y:p.rect.y + (j+0.5)*p.cell,
+                     ripe:true, t:0, seed:Math.random()*6.28, grow:1 });
+  }
+
+  for(const s of STATIONS){
+    s.unlocked = (s.id==='market');
+    s.timer = 0;
+    s.bin = emptyBag();
+    s.pend = emptyBag();
+    s.out = 0;
+  }
+  actors  = [ newActor(16.2, 11.0, false) ];
+  flyers = []; pops = []; puffs = []; coinFx = []; customers = [];
+  for(let i=0;i<7;i++) customers.push(newCustomer(i));
+  refreshOrders();
+  shake = 0;
+  save();
+}
+const player = ()=> actors[0];
+
+/* -------------------------------------------------------------- customers
+   Villagers walk the road, queue at the farm stand and buy what they want. */
+function availableItems(){
+  const out = [];
+  for(const k of ITEM_ORDER){
+    const src = STATIONS.find(s=>s.kind==='make' && s.recipe.out===k);
+    if(src){ if(src.unlocked) out.push(k); continue; }
+    const pat = PATCHES.find(p=>p.item===k);
+    if(pat && patchOpen(pat)) out.push(k);
+  }
+  return out;
+}
+const wantedItems = availableItems;
+function newCustomer(i){
+  const c = { tint:['#4e7fd4','#d4684e','#5fb04e','#e0b23c','#9b59b6','#16a085','#e67e22'][i%7],
+              carry:{wheat:0,egg:0,pie:0}, cut:0, bob:0, moving:false, face:2.2,
+              x:34.3+rnd(-.5,.5), y:MAP.h-2-i*1.8, slot:-1, order:i, happy:0 };
+  resetCustomer(c, true);
+  return c;
+}
+function resetCustomer(c, first){
+  const pool = wantedItems();
+  c.want  = pool[Math.floor(rnd(0,pool.length))];
+  c.n     = 1 + Math.floor(rnd(0, c.want==='wheat' ? 3 : 2));
+  c.state = 'walk';
+  c.slot  = -1;
+  if(!first){ c.x = 34.3+rnd(-.5,.5); c.y = MAP.h-1.5; }
+}
+
+function updateCustomers(dt){
+  // hand out queue slots, nearest customer to the front
+  for(let i=0;i<QUEUE.length;i++){
+    if(customers.some(c=>c.slot===i)) continue;
+    let best=null;
+    for(const c of customers) if(c.state==='walk' && c.slot<0 && (!best || c.y<best.y)) best=c;
+    if(best) best.slot = i;
+  }
+  let holding = 0;
+  for(const c of customers){
+    let tx=c.x, ty=c.y, speed=1.7;
+    if(c.state==='leave'){
+      tx = c.x; ty = 1.0; speed = 2.4;
+      if(c.y < 2.2){ resetCustomer(c); continue; }
+    } else if(c.slot>=0){
+      tx = QUEUE[c.slot].x; ty = QUEUE[c.slot].y;
+    } else {
+      tx = 34.3; ty = QUEUE[QUEUE.length-1].y + 2.2 + (holding++)*1.7;   // wait in line
+    }
+    const dx=tx-c.x, dy=ty-c.y, m=Math.hypot(dx,dy);
+    if(m > 0.12){
+      c.x += dx/m*speed*dt; c.y += dy/m*speed*dt;
+      c.bob += dt*speed*3.4; c.moving = true;
+      c.face = Math.atan2(dy,dx);
+    } else {
+      c.moving = false;
+      if(c.state==='walk' && c.slot>=0) c.state = 'wait';
+    }
+    if(c.happy>0) c.happy -= dt;
+  }
+}
+
+/* serve the front of the queue — player only, the farmhands never touch it */
+function serveStand(a, dt){
+  if(!inRect(a, STAND)) return false;
+  const waiting = customers.filter(c=>c.state==='wait' && c.n>0);
+  if(waiting.length) hint('stand','Villagers pay '+Math.round((STAND_BONUS-1)*100)+'% over market for what they ask for');
+  let served = false;
+  while(a.ioT >= IO_INTERVAL){
+    const c = waiting.find(c=>c.n>0 && a.carry[c.want]>0);
+    if(!c) break;
+    a.ioT -= IO_INTERVAL;
+    const step = Math.min(a.carry[c.want], c.n, flowStep(c.n));
+    a.carry[c.want] -= step; c.n -= step;
+    served = true;
+    const pay = standPrice(c.want)*step, cx = c.x, cy = c.y;
+    itemFlyer(c.want, {x:a.x,y:a.y}, {x:cx,y:cy}, ()=>{
+      G.coins += pay; G.earned += pay;
+      spawnCoinFx(); sfx.coin();
+      pops.push({x:cx, y:cy, z:1.5, t:0, txt:'+'+pay, col:'#7dff8d'});
+      checkLevel();
+    });
+    if(c.n<=0){
+      c.state='leave'; c.slot=-1; c.happy=1.4;
+      for(let i=0;i<10;i++) puffs.push({x:cx,y:cy,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
+        t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
+    }
+  }
+  return served;
+}
+
+/* -------------------------------------------------------------- persistence */
+const SAVE_KEY = 'harvest-hero-v1';
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({
+    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
+    sound:G.sound, seenHint:G.seenHint, won:G.won,
+    story:G.story, journal:G.journal, orders:G.orders })); }catch(e){}
+}
+function load(){
+  let d=null; try{ d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){}
+  if(!d) return;
+  G.coins=d.coins|0; G.earned=d.earned|0; G.hands=d.hands|0;
+  Object.assign(G.up, d.up||{}); Object.assign(G.paid, d.paid||{});
+  G.sound = d.sound!==false; G.seenHint = d.seenHint||{}; G.won=!!d.won;
+  G.story = d.story||{}; G.journal = d.journal||[];
+
+  /* Saves from before the valley expanded: a bakery used to run on raw wheat,
+     so grant the mill that now feeds it rather than stranding the player. */
+  if(G.up.bakery>0 && !G.up.windmill) G.up.windmill = 1;
+
+  G.level = 1; while(G.earned >= levelReq(G.level)) G.level++;
+  for(const s of STATIONS) if(s.id!=='market') s.unlocked = (G.up[s.id]||0)>0;
+  G.orders = Array.isArray(d.orders) && d.orders.length ? d.orders : [];
+  refreshOrders();
+  for(let i=0;i<G.hands;i++) actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true));
+}
+
+/* -------------------------------------------------------------- audio */
+let AC=null;
+function beep(freq, dur, type, vol, slide){
+  if(!G.sound) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended') AC.resume();
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.type=type||'square'; o.frequency.setValueAtTime(freq, AC.currentTime);
+    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40,slide), AC.currentTime+dur);
+    g.gain.setValueAtTime(0.0001, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol||0.05, AC.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+dur);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+dur+0.02);
+  }catch(e){}
+}
+const sfx = {
+  cut:  ()=>beep(rnd(280,340), .07, 'sawtooth', .035, 140),
+  pick: ()=>beep(rnd(620,760), .06, 'triangle', .04),
+  coin: ()=>beep(rnd(880,1180), .09, 'square', .035, 1500),
+  buy:  ()=>{ beep(523,.1,'square',.06); setTimeout(()=>beep(659,.1,'square',.06),90);
+              setTimeout(()=>beep(784,.18,'square',.06),180); },
+  levelup: ()=>{ beep(660,.1,'triangle',.07); setTimeout(()=>beep(880,.2,'triangle',.07),110); },
+};
+
+/* -------------------------------------------------------------- input */
+const keys = {};
+addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true;
+  if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase())) e.preventDefault(); });
+addEventListener('keyup',   e=>{ keys[e.key.toLowerCase()]=false; });
+
+const stick = { on:false, id:null, ox:0, oy:0, x:0, y:0, dx:0, dy:0 };
+function stickStart(id,x,y){ stick.on=true; stick.id=id; stick.ox=x; stick.oy=y; stick.x=x; stick.y=y; if(AC&&AC.state==='suspended')AC.resume(); }
+function stickMove(x,y){
+  stick.x=x; stick.y=y;
+  let dx=x-stick.ox, dy=y-stick.oy;
+  const R=70, m=Math.hypot(dx,dy);
+  if(m>R){ stick.ox += dx*(1-R/m); stick.oy += dy*(1-R/m); dx*=R/m; dy*=R/m; }
+  stick.dx=dx/R; stick.dy=dy/R;
+}
+function stickEnd(){ stick.on=false; stick.id=null; stick.dx=0; stick.dy=0; }
+
+cvs.addEventListener('pointerdown', e=>{ cvs.setPointerCapture(e.pointerId); stickStart(e.pointerId,e.clientX,e.clientY); });
+cvs.addEventListener('pointermove', e=>{ if(stick.on && e.pointerId===stick.id) stickMove(e.clientX,e.clientY); });
+cvs.addEventListener('pointerup',     e=>{ if(e.pointerId===stick.id) stickEnd(); });
+cvs.addEventListener('pointercancel', e=>{ if(e.pointerId===stick.id) stickEnd(); });
+
+/* screen-space input vector -> world-space direction (isometric) */
+function inputDir(){
+  let sx=0, sy=0;
+  if(keys['a']||keys['arrowleft'])  sx-=1;
+  if(keys['d']||keys['arrowright']) sx+=1;
+  if(keys['w']||keys['arrowup'])    sy-=1;
+  if(keys['s']||keys['arrowdown'])  sy+=1;
+  if(sx||sy){ const m=Math.hypot(sx,sy); sx/=m; sy/=m; }
+  else if(stick.on){ sx=stick.dx; sy=stick.dy; const m=Math.hypot(sx,sy); if(m>1){sx/=m;sy/=m;} }
+  if(!sx && !sy) return {x:0,y:0,m:0};
+  const wx = sx/(TW/2) + sy/(TH/2);
+  const wy = sy/(TH/2) - sx/(TW/2);
+  const wm = Math.hypot(wx,wy);
+  const m  = Math.min(1, Math.hypot(sx,sy));
+  return { x:wx/wm, y:wy/wm, m };
+}
+
+/* =======================================================================
+   UPDATE
+   ===================================================================== */
+let shake = 0, hintTimer = 0;
+const IO_INTERVAL = 0.06;
+/* Any transfer completes in roughly 50 ticks whatever its size, so a 1000-item
+   haul empties as fast as a 12-item one — each flyer just carries more. */
+const flowStep = total => Math.max(1, Math.ceil(total/50));
+
+function inRect(a, r){ return a.x>r.x && a.x<r.x+r.w && a.y>r.y && a.y<r.y+r.h; }
+function rectCenter(r){ return { x:r.x+r.w/2, y:r.y+r.h/2 }; }
+function station(id){ return STATIONS.find(s=>s.id===id); }
+
+function collide(a){
+  for(const s of STATIONS){
+    if(!s.unlocked) continue;
+    const b=s.b, r=0.45;
+    if(a.x>b.x-r && a.x<b.x+b.w+r && a.y>b.y-r && a.y<b.y+b.h+r){
+      const dl=a.x-(b.x-r), dr=(b.x+b.w+r)-a.x, du=a.y-(b.y-r), dd=(b.y+b.h+r)-a.y;
+      const m=Math.min(dl,dr,du,dd);
+      if(m===dl) a.x=b.x-r; else if(m===dr) a.x=b.x+b.w+r;
+      else if(m===du) a.y=b.y-r; else a.y=b.y+b.h+r;
+    }
+  }
+  a.x = clamp(a.x, 1, MAP.w-1.2);
+  a.y = clamp(a.y, 1, MAP.h-1.2);
+}
+
+function moveActor(a, dx, dy, mag, dt){
+  const sp = moveSpeed() * (a.hand?0.88:1) * mag;
+  const ax = dx*sp, ay = dy*sp;
+  a.vx = lerp(a.vx, ax, 1-Math.pow(0.0008, dt));
+  a.vy = lerp(a.vy, ay, 1-Math.pow(0.0008, dt));
+  a.x += a.vx*dt; a.y += a.vy*dt;
+  collide(a);
+  const spd = Math.hypot(a.vx,a.vy);
+  if(spd>0.25){
+    a.bob += dt*spd*3.4;
+    const want = Math.atan2(a.vy, a.vx);
+    let d = want - a.face;
+    while(d> Math.PI) d-=Math.PI*2;
+    while(d<-Math.PI) d+=Math.PI*2;
+    a.face += d * (1-Math.pow(0.0001, dt));
+  } else a.bob = lerp(a.bob, 0, 1-Math.pow(0.001,dt));
+  a.moving = spd>0.25;
+}
+
+function patchAt(x,y){
+  for(const p of PATCHES){
+    const r=p.rect;
+    if(patchOpen(p) && x>r.x && x<r.x+r.w && y>r.y && y<r.y+r.h) return p;
+  }
+  return null;
+}
+
+function actorCap(a){ return a.hand ? Math.max(12, Math.round(capacity()*0.35)) : capacity(); }
+function reach(){ return 0.75 + 0.15*G.up.scythe; }
+
+function nodesAround(p, x, y, R){
+  const out = [], r = p.rect;
+  const i0=Math.max(0,Math.floor((x-R-r.x)/p.cell)), i1=Math.min(p.cols-1,Math.floor((x+R-r.x)/p.cell));
+  const j0=Math.max(0,Math.floor((y-R-r.y)/p.cell)), j1=Math.min(p.rows-1,Math.floor((y+R-r.y)/p.cell));
+  for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){
+    const t = p.nodes[j*p.cols+i];
+    if(dist2(x,y,t.x,t.y) <= R*R) out.push(t);
+  }
+  return out;
+}
+
+function tryHarvest(a, dt){
+  const p = patchAt(a.x, a.y);
+  if(!p){ a.cut = 0; return false; }
+  const R = reach() + (p.kind==='tree' ? 0.7 : 0);      // trees are wide, reach into them
+  const room = actorCap(a) - carried(a);
+  const near = nodesAround(p, a.x, a.y, R).filter(t=>t.ripe);
+  if(!near.length){ a.cut = 0; return false; }
+  if(room <= 0){
+    if(!a.hand) hint('bagfull', 'BAG FULL \u2014 go sell it!');
+    a.cut = 0; return false;
+  }
+  a.cut += dt * harvestRate() * (a.hand?0.8:1);
+  if(a.cut < 1) return false;
+  a.cut = 0;
+
+  near.sort((q,r)=> dist2(a.x,a.y,q.x,q.y) - dist2(a.x,a.y,r.x,r.y));
+  const per = yieldPer() * p.yieldMul;
+  let gained = 0;
+  for(const t of near){
+    if(gained + per > room && gained > 0) break;
+    t.ripe = false; t.grow = 0; t.t = regrowTime(p)*rnd(0.8,1.2);
+    const g = Math.min(per, room - gained);
+    gained += g;
+    const col = p.kind==='tree' ? '#d8402f' : '#f7d24a';
+    for(let i=0;i<4;i++) puffs.push({x:t.x, y:t.y, z:p.kind==='tree'?1.4:0.2,
+      vx:rnd(-1,1), vy:rnd(-1,1), vz:rnd(1.4,2.6), t:0, life:rnd(.35,.6), col, r:rnd(2,4)});
+    if(gained >= room) break;
+  }
+  a.carry[p.item] += gained;
+  if(!a.hand && gained>0){
+    sfx.cut();
+    pops.push({x:a.x, y:a.y, z:1.0, t:0, txt:'+'+gained, col:'#ffe066'});
+    hint('sell','Bag getting full? Sell it at the MARKET up north');
+  }
+  return true;
+}
+
+function trayWorld(s, tr){ return { x:tr.x+tr.w/2, y:tr.y+tr.h/2 }; }
+
+function itemFlyer(item, from, to, onDone){
+  flyers.push({ item, x0:from.x, y0:from.y, x1:to.x, y1:to.y, t:0, dur:0.34,
+                h:rnd(1.6,2.4), spin:rnd(-6,6), onDone });
+}
+
+/* interaction with station trays: unload / pick up / sell */
+function tryStations(a, dt){
+  a.ioT = (a.ioT||0) + dt;
+  if(!a.hand && serveStand(a, dt)) return;
+  if(!a.hand && serveBoard(a, dt)) return;
+  for(const s of STATIONS){
+    if(!s.unlocked) continue;
+    for(const tr of s.trays){
+      if(!inRect(a, tr)) continue;
+
+      if(tr.mode==='sell'){
+        if(carried(a)<=0) continue;
+        const step0 = flowStep(actorCap(a));   // constant, so the stack always drains
+        while(a.ioT >= IO_INTERVAL && carried(a)>0){
+          a.ioT -= IO_INTERVAL;
+          const it = a.carry.pie>0 ? 'pie' : a.carry.egg>0 ? 'egg' : 'wheat';
+          // never in fewer than ~8 parcels, so even a small load still streams
+          const step = Math.max(1, Math.min(a.carry[it], step0, Math.ceil(a.carry[it]/8)));
+          a.carry[it] -= step;
+          const price = ITEMS[it].price * step;
+          const p = {x:a.x, y:a.y};
+          itemFlyer(it, p, rectCenter({x:s.b.x,y:s.b.y,w:s.b.w,h:s.b.h}), ()=>{
+            G.coins += price; G.earned += price;
+            spawnCoinFx(); sfx.coin();
+            pops.push({x:a.x,y:a.y,z:1.3,t:0,txt:'+'+fmt(price),col:'#7dff8d'});
+            checkLevel();
+          });
+        }
+        hint('pad','Coins pay for UPGRADES — stand on a glowing pad');
+        return;
+      }
+
+      if(tr.mode==='in'){
+        const it = tr.item;
+        if(a.carry[it]<=0 || s.bin[it]+s.pend[it]>=TRAY_CAP) continue;
+        const step0 = flowStep(TRAY_CAP);
+        while(a.ioT >= IO_INTERVAL && a.carry[it]>0 && s.bin[it]+s.pend[it]<TRAY_CAP){
+          a.ioT -= IO_INTERVAL;
+          const step = Math.min(a.carry[it], step0, TRAY_CAP - s.bin[it] - s.pend[it]);
+          a.carry[it] -= step; s.pend[it] += step;
+          const p={x:a.x,y:a.y}, dst=trayWorld(s,tr);
+          itemFlyer(it, p, dst, ()=>{ s.pend[it]-=step; s.bin[it]+=step; });
+          if(!a.hand) sfx.pick();
+        }
+        return;
+      }
+
+      if(tr.mode==='out'){
+        const it = tr.item;
+        if(s.out<=0 || carried(a)>=actorCap(a)) continue;
+        const step0 = flowStep(TRAY_CAP);
+        while(a.ioT >= IO_INTERVAL && s.out>0 && carried(a)<actorCap(a)){
+          a.ioT -= IO_INTERVAL;
+          const step = Math.min(s.out, step0, actorCap(a)-carried(a));
+          s.out -= step;
+          const src=trayWorld(s,tr);
+          a.carry[it] += step;
+          itemFlyer(it, src, {x:a.x,y:a.y}, null);
+          if(!a.hand) sfx.pick();
+        }
+        return;
+      }
+    }
+  }
+  if(a.ioT > 0.5) a.ioT = 0;
+}
+
+function produce(dt){
+  for(const s of STATIONS){
+    if(!s.unlocked || s.kind!=='make') continue;
+    const r = s.recipe;
+    const has = Object.keys(r.in).every(k => s.bin[k] >= r.in[k]);
+    if(has && s.out < TRAY_CAP){
+      s.timer += dt;
+      if(s.timer >= r.time){
+        s.timer = 0;
+        // one batch, limited by stock and by tray room
+        let batch = 1 + G.up.crew;
+        for(const k in r.in) batch = Math.min(batch, Math.floor(s.bin[k] / r.in[k]));
+        batch = Math.max(1, Math.min(batch, TRAY_CAP - s.out));
+        for(const k in r.in) s.bin[k] -= r.in[k] * batch;
+        s.out += batch;
+        const c = {x:s.b.x+s.b.w/2, y:s.b.y+s.b.h/2};
+        puffs.push({x:c.x,y:c.y,z:2.2,vx:0,vy:0,vz:1.6,t:0,life:.5,col:'#ffffff',r:5});
+      }
+    } else s.timer = Math.min(s.timer, r.time);
+  }
+}
+
+/* ------------------------------------------------------------ upgrade pads */
+function visiblePads(){ return PADS.filter(p => (G.up[p.id]||0) < p.max && p.show()); }
+
+function updatePads(dt){
+  const a = player();
+  for(const p of PADS){
+    p.active = false;
+    if((G.up[p.id]||0) >= p.max || !p.show()) continue;
+    if(dist2(a.x,a.y,p.x,p.y) < 1.1*1.1){
+      p.active = true;
+      const cost = padCost(p);
+      const need = cost - G.paid[p.id];
+      if(G.coins > 0 && need > 0){
+        const rate = Math.max(14, (cost/1.8) * (0.4 + 1.2*(G.paid[p.id]/cost)));
+        const amt = Math.min(rate*dt, G.coins, need);
+        G.coins -= amt; G.paid[p.id] += amt;
+        p.pulse = (p.pulse||0) + dt*14;
+        if(!p.sT || G.t-p.sT>0.09){ p.sT=G.t; beep(300+520*(G.paid[p.id]/cost), .05, 'square', .03); }
+        if(G.paid[p.id] >= cost-0.001) buyPad(p);
+      }
+    }
+  }
+}
+
+function buyPad(p){
+  G.paid[p.id] = 0;
+  G.up[p.id] = (G.up[p.id]||0) + 1;
+  sfx.buy(); shake = 9;
+  pops.push({x:p.x, y:p.y, z:2.0, t:0, txt:p.name+'!', col:'#8ef07a', big:true});
+  for(let i=0;i<26;i++) puffs.push({x:p.x,y:p.y,z:.4,vx:rnd(-3,3),vy:rnd(-3,3),vz:rnd(2,5.5),
+    t:0,life:rnd(.5,1),col:['#ffe066','#8ef07a','#6fd0ff','#ff9de0'][i%4],r:rnd(2.5,5)});
+
+  const st = STATIONS.find(x=>x.id===p.id);
+  if(st){
+    st.unlocked = true;
+    const r = st.recipe;
+    const ins = r ? Object.keys(r.in).map(k=>ITEMS[k].label.toLowerCase()).join(' + ') : '';
+    hint('open'+p.id, st.name+' OPEN \u2014 ' + (r ? ins+' \u2192 '+ITEMS[r.out].label.toLowerCase() : 'ready'), true);
+  }
+  if(p.id==='orchard') hint('openorchard','The orchard is planted \u2014 walk under the trees to pick apples', true);
+  if(p.id==='hand'  ){ G.hands++; actors.push(newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true));
+    hint('handdone','A farmhand joined! They work the wheat field for you.', true); }
+  save();
+}
+
+/* ------------------------------------------------------------ farmhand AI */
+function deliveryTarget(){
+  let best = null, bestFill = 1e9;
+  for(const st of STATIONS){
+    if(!st.unlocked || st.kind!=='make' || !st.recipe.in.wheat) continue;
+    const fill = st.bin.wheat + st.pend.wheat;
+    if(fill >= TRAY_CAP-2) continue;
+    if(fill < bestFill){ bestFill = fill; best = st.trays.find(t=>t.mode==='in' && t.item==='wheat'); }
+  }
+  return best || station('market').trays[0];
+}
+
+function updateHand(a, dt){
+  a.think = (a.think||0) - dt;
+
+  if(a.state==='seek'){
+    if(carried(a) >= actorCap(a)){ a.state='deliver'; a.target=null; a.think=0; }
+    else {
+      if(!a.target || a.think<=0 || !a.target.ripe){
+        a.think = 0.5;
+        let best=null, bd=1e9;
+        for(const p of PATCHES){
+          if(!patchOpen(p) || p.kind!=='crop') continue;   // hands work the field, you pick the fruit
+          for(const t of p.nodes){
+            if(!t.ripe) continue;
+            let d = dist2(a.x,a.y,t.x,t.y);
+            for(const o of actors) if(o!==a && o.target===t) d += 30;
+            if(d<bd){ bd=d; best=t; }
+          }
+        }
+        a.target = best;
+      }
+      if(a.target){
+        const dx=a.target.x-a.x, dy=a.target.y-a.y, m=Math.hypot(dx,dy);
+        if(m>0.28) moveActor(a, dx/m, dy/m, 1, dt);
+        else { moveActor(a,0,0,0,dt); tryHarvest(a, dt); }
+      } else moveActor(a,0,0,0,dt);
+    }
+  } else {
+    if(carried(a) <= 0){ a.state='seek'; a.target=null; a.think=0; return; }
+    if(!a.tray || a.think<=0){ a.think=1.2; a.tray = deliveryTarget(); }
+    const c = rectCenter(a.tray);
+    const dx=c.x-a.x, dy=c.y-a.y, m=Math.hypot(dx,dy);
+    if(m>0.2) moveActor(a, dx/m, dy/m, 1, dt);
+    else moveActor(a,0,0,0,dt);
+    tryStations(a, dt);
+  }
+}
+
+/* ------------------------------------------------------------ the valley
+   Hollowbrook went quiet when the old mill stopped turning. Chapters land
+   as you put each piece of it back.                                       */
+const STORY = [
+  { id:'intro', icon:'\u2709\uFE0F', title:'Gran\u2019s letter',
+    when:()=>true,
+    text:'"The valley\u2019s yours now, love. The wheat still comes up on its own \u2014 stubborn, like your grandfather. Everything else here stopped when the mill did. Start with the field." \u2014 Gran' },
+  { id:'firstcoin', icon:'\u{1FA99}', title:'First coins',
+    when:()=>G.earned>=40,
+    text:'Old Maren counts out your coins twice, then says: "Your gran\u2019s field. Good." First person to speak to you all week.' },
+  { id:'mill', icon:'\u{1F3ED}', title:'The mill turns',
+    when:()=>G.up.windmill>0,
+    text:'The sails catch, groan, and turn. Half the village comes out to watch. Hollowbrook has not smelled of flour in years.' },
+  { id:'coop', icon:'\u{1F414}', title:'Hens',
+    when:()=>G.up.coop>0,
+    text:'Six hens arrive in a crate with no note. You suspect Maren. They settle in like they always lived here.' },
+  { id:'hand', icon:'\u{1F468}\u200D\u{1F33E}', title:'You are not alone',
+    when:()=>G.hands>0,
+    text:'A neighbour\u2019s lad turns up at dawn, takes a scythe off the wall and starts cutting. "Pay me in bread," he says.' },
+  { id:'bakery', icon:'\u{1F967}', title:'The bakery reopens',
+    when:()=>G.up.bakery>0,
+    text:'The old oven still draws. By the second batch there is a queue at the road \u2014 they all just followed the smell.' },
+  { id:'dairy', icon:'\u{1F404}', title:'Cows on the lane',
+    when:()=>G.up.dairy>0,
+    text:'Four cows come down the lane, unhurried, as if they had an appointment. By evening the barn smells of warm milk.' },
+  { id:'cheese', icon:'\u{1F9C0}', title:'A buyer from the city',
+    when:()=>G.up.cheese>0,
+    text:'A trader rides out specially, tastes the cheese, says nothing for a long moment \u2014 then orders everything you can make.' },
+  { id:'orchard', icon:'\u{1F34E}', title:'Gran\u2019s orchard',
+    when:()=>G.up.orchard>0,
+    text:'You find the old grove under twenty years of bramble. The root stock is still alive, and by autumn the branches hang red.' },
+  { id:'jam', icon:'\u{1F353}', title:'The recipe',
+    when:()=>G.up.jam>0,
+    text:'Gran\u2019s recipe was folded inside the kitchen clock, exactly where she said. You make a batch. It tastes like being eight.' },
+  { id:'festival', icon:'\u{1F389}', title:'Harvest Festival',
+    when:()=>G.level>=15,
+    text:'The first festival since you were small: trestle tables, the mill lit up, your pies gone in an hour. Maren raises a glass to Gran \u2014 then, to your enormous embarrassment, to you.' },
+];
+
+function checkStory(){
+  for(const c of STORY){
+    if(G.story[c.id] || !c.when()) continue;
+    G.story[c.id] = 1;
+    G.journal.push(c.id);
+    showChapter(c);
+    save();
+    return;                      // one at a time, so they never stack up
+  }
+}
+
+/* ------------------------------------------------------------ order board */
+function makeOrder(){
+  const pool = availableItems().filter(k=>k!=='wheat');
+  if(!pool.length) pool.push('wheat');
+  const kinds = pool.length>1 && Math.random()<0.55 ? 2 : 1;
+  const picked = [], items = {};
+  for(let i=0;i<kinds;i++){
+    let k; let guard=0;
+    do { k = pool[Math.floor(rnd(0,pool.length))]; } while(picked.includes(k) && ++guard<10);
+    if(picked.includes(k)) continue;
+    picked.push(k);
+    const base = ITEMS[k].price;
+    const qty = Math.max(2, Math.round((18 + G.level*4) / Math.sqrt(base)));
+    items[k] = qty;
+  }
+  let pay = 0;
+  for(const k in items) pay += ITEMS[k].price * items[k];
+  return { items, need:Object.assign({}, items), pay:Math.round(pay*ORDER_BONUS) };
+}
+function orderKey(o){ return Object.keys(o.need).sort().join('+'); }
+function refreshOrders(){
+  G.orders = G.orders.filter(o => o && o.need && Object.keys(o.need).length);
+  // an order posted before the farm could make anything better is not worth keeping
+  if(availableItems().length > 1)
+    G.orders = G.orders.filter(o => !(orderKey(o)==='wheat' && Object.keys(o.items).length===1));
+  let guard = 0;
+  while(G.orders.length < 2 && guard++ < 24){
+    const o = makeOrder();
+    if(G.orders.some(x => orderKey(x) === orderKey(o))) continue;
+    G.orders.push(o);
+  }
+  while(G.orders.length < 2) G.orders.push(makeOrder());   // fall back rather than spin
+}
+function orderDone(o){ return Object.keys(o.need).every(k=>o.need[k]<=0); }
+
+function serveBoard(a, dt){
+  if(!inRect(a, BOARD)) return false;
+  hint('board','The village posts orders here \u2014 they pay well over market');
+  let did = false;
+  while(a.ioT >= IO_INTERVAL){
+    let hit = null, key = null;
+    for(const o of G.orders){
+      for(const k in o.need){
+        if(o.need[k] > 0 && a.carry[k] > 0){ hit = o; key = k; break; }
+      }
+      if(hit) break;
+    }
+    if(!hit) break;
+    a.ioT -= IO_INTERVAL;
+    const step = Math.max(1, Math.min(a.carry[key], hit.need[key], flowStep(hit.items[key])));
+    a.carry[key] -= step; hit.need[key] -= step;
+    did = true;
+    const c = rectCenter(BOARD);
+    itemFlyer(key, {x:a.x,y:a.y}, c, null);
+    if(orderDone(hit)){
+      const pay = hit.pay;
+      G.coins += pay; G.earned += pay;
+      G.orders.splice(G.orders.indexOf(hit), 1);
+      G.orders.push(makeOrder());
+      sfx.buy(); shake = Math.max(shake, 7);
+      pops.push({x:c.x, y:c.y, z:2.2, t:0, txt:'ORDER FILLED +$'+fmt(pay), col:'#8ef07a', big:true});
+      for(let i=0;i<20;i++) puffs.push({x:c.x,y:c.y,z:.6,vx:rnd(-3,3),vy:rnd(-3,3),vz:rnd(2,5),
+        t:0,life:rnd(.5,1),col:['#ffe066','#8ef07a','#6fd0ff'][i%3],r:rnd(2.5,5)});
+      spawnCoinFx(); checkLevel(); save();
+    }
+  }
+  return did;
+}
+
+/* ------------------------------------------------------------ fx + level */
+function spawnCoinFx(){
+  const a = player();
+  const p = worldToScreen(a.x, a.y, 1.1);
+  const pill = document.getElementById('p-coin').getBoundingClientRect();
+  coinFx.push({ x:p.x, y:p.y, x1:pill.left+24, y1:pill.top+pill.height/2,
+                cx:p.x+rnd(-90,90), cy:p.y-rnd(90,190), t:0, dur:rnd(.45,.62), r:rnd(9,13) });
+}
+
+function levelReq(n){ return Math.round(60*Math.pow(n,1.75)); }
+function checkLevel(){
+  while(G.earned >= levelReq(G.level)){
+    G.level++; sfx.levelup(); shake=Math.max(shake,7);
+    pops.push({x:player().x, y:player().y, z:2.4, t:0, txt:'LEVEL '+G.level+'!', col:'#6fd0ff', big:true});
+    if(G.level>=15 && !G.won){ G.won=true; winModal(); }
+    save();
+  }
+}
+
+/* ------------------------------------------------------------ main update */
+function update(dt){
+  G.t += dt;
+  const a = player();
+  const d = inputDir();
+  moveActor(a, d.x, d.y, d.m, dt);
+  tryHarvest(a, dt);
+  tryStations(a, dt);
+  for(let i=1;i<actors.length;i++) updateHand(actors[i], dt);
+
+  produce(dt);
+  updatePads(dt);
+
+  for(const p of PATCHES){
+    if(!patchOpen(p)) continue;
+    for(const t of p.nodes){
+      if(!t.ripe){ t.t -= dt; if(t.t<=0){ t.ripe=true; t.grow=0; } }
+      else if(t.grow<1) t.grow = Math.min(1, t.grow + dt*2.4);
+    }
+  }
+
+  for(let i=flyers.length-1;i>=0;i--){
+    const f=flyers[i]; f.t += dt/f.dur;
+    if(f.t>=1){ if(f.onDone) f.onDone(); flyers.splice(i,1); }
+  }
+  for(let i=pops.length-1;i>=0;i--){ const p=pops[i]; p.t+=dt; if(p.t>1.1) pops.splice(i,1); }
+  for(let i=puffs.length-1;i>=0;i--){
+    const p=puffs[i]; p.t+=dt;
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; p.vz-=9*dt;
+    if(p.t>p.life) puffs.splice(i,1);
+  }
+  for(let i=coinFx.length-1;i>=0;i--){ const c=coinFx[i]; c.t+=dt/c.dur; if(c.t>=1){ bumpPill('p-coin'); coinFx.splice(i,1);} }
+
+  updateCustomers(dt);
+  checkStory();
+  if(G.orders.length < 2 || G.t - (G.orderT||0) > 6){ G.orderT = G.t; refreshOrders(); }
+
+  shake = Math.max(0, shake - dt*26);
+  chapterT = Math.max(0, chapterT - dt);
+  if(chapterT===0) el('chapter').classList.remove('on');
+  hintTimer = Math.max(0, hintTimer - dt);
+  if(hintTimer===0) document.getElementById('hint').classList.remove('on');
+
+  // camera
+  const ip = iso(a.x, a.y);
+  cam.x = lerp(cam.x, ip.sx, 1-Math.pow(0.0015, dt));
+  cam.y = lerp(cam.y, ip.sy, 1-Math.pow(0.0015, dt));
+
+  syncHUD();
+  if((G.t|0)!==lastSave && (G.t|0)%5===0){ lastSave=G.t|0; save(); }
+}
+let lastSave = 0;
+
+/* =======================================================================
+   RENDER
+   ===================================================================== */
+const cam = { x:0, y:0 };
+let DPR = 1;
+
+function resize(){
+  CW = innerWidth; CH = innerHeight;
+  DPR = Math.min(devicePixelRatio||1, 2);
+  cvs.width = CW*DPR; cvs.height = CH*DPR;
+  ZOOM = clamp(Math.min(CW/760, CH/1150)*1.32, 0.42, 1.15);
+}
+addEventListener('resize', resize);
+
+function worldToScreen(x,y,z){
+  const p = iso(x,y);
+  return { x:(p.sx-cam.x)*ZOOM + CW/2, y:(p.sy - (z||0)*TH*0.9 - cam.y)*ZOOM + CH/2 };
+}
+
+function quad(x,y,w,h,fill,alpha){
+  const a=iso(x,y), b=iso(x+w,y), c=iso(x+w,y+h), d=iso(x,y+h);
+  ctx.globalAlpha = alpha===undefined?1:alpha;
+  ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.lineTo(c.sx,c.sy); ctx.lineTo(d.sx,d.sy); ctx.closePath();
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function poly(pts, fill, stroke, lw){
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.closePath();
+  if(fill){ ctx.fillStyle=fill; ctx.fill(); }
+  if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=lw||2; ctx.lineJoin='round'; ctx.stroke(); }
+}
+
+/* deterministic scenery */
+let decor = [];
+function buildDecor(){
+  decor = [];
+  let seed = 1337;
+  const rr = ()=> (seed = (seed*1664525+1013904223)%4294967296) / 4294967296;
+  const blocked = (x,y)=>{
+    for(const p of PATCHES){ const r=p.rect;
+      if(x>r.x-1.5 && x<r.x+r.w+1.5 && y>r.y-1.5 && y<r.y+r.h+1.5) return true; }
+    if(x>9.8 && x<18.4) return true;                        // the yard + pad lane
+    for(const s of STATIONS){ const b=s.b; if(x>b.x-2&&x<b.x+b.w+2&&y>b.y-2&&y<b.y+b.h+2) return true; }
+    if(x>32.4) return true;                                 // village road
+    return false;
+  };
+  for(let i=0;i<900;i++){
+    const x = rr()*MAP.w, y = rr()*MAP.h;
+    if(blocked(x,y)) continue;
+    const k = rr();
+    decor.push({ x, y, kind: k<0.46?'tree' : k<0.72?'bale' : k<0.86?'bush' : 'rock',
+                 s: 0.8+rr()*0.5, ph: rr()*6.28 });
+  }
+}
+
+function drawGround(){
+  quad(0,0,MAP.w,MAP.h, '#6ab043');
+  for(let j=0;j<MAP.h;j+=2) quad(0,j,MAP.w,1, '#72b748');
+  quad(10.4, 1.4, 8.2, MAP.h-3, '#cba46a');                 // yard + upgrade lane
+  quad(10.4, 1.4, 8.2, MAP.h-3, '#000', 0.05);
+  for(const p of PATCHES){
+    if(!patchOpen(p)) continue;
+    const r = p.rect, soil = p.kind==='tree' ? '#7fae4a' : '#a9793f';
+    quad(r.x-1, r.y-1, r.w+2, r.h+2, soil);
+    quad(r.x-1, r.y-1, r.w+2, r.h+2, '#000', 0.06);
+  }
+  quad(33.0, 2.5, 3.6, MAP.h-4, '#d8c48d');                 // village road
+  for(const s of STATIONS){ if(!s.unlocked) continue; quad(s.b.x-0.7,s.b.y-0.7,s.b.w+1.4,s.b.h+1.4,'#b99257'); }
+}
+
+let view = {x0:-1e9,x1:1e9,y0:-1e9,y1:1e9};
+function visible(p, m){ m=m||90; return p.sx>view.x0-m && p.sx<view.x1+m && p.sy>view.y0-m && p.sy<view.y1+m; }
+
+const STALK = [[-12,3],[-5,7],[2,2],[9,6],[-1,-2]];
+const _vis = [];
+function drawCrops(){
+  for(const p of PATCHES){
+    if(!patchOpen(p) || p.kind!=='crop') continue;
+    _vis.length = 0;
+    for(const t of p.nodes){
+      const q = iso(t.x, t.y);
+      if(visible(q)) _vis.push([t, q.sx, q.sy]);
+    }
+    ctx.lineCap='round';
+    ctx.strokeStyle='#c9991c'; ctx.lineWidth=2;
+    ctx.beginPath();
+    for(const v of _vis){
+      const t=v[0]; if(!t.ripe) continue;
+      for(let k=0;k<5;k++){
+        const ox=STALK[k][0], oy=STALK[k][1];
+        const sway = Math.sin(G.t*1.6 + t.seed + k*0.5)*2.8;
+        const h = (19 + (k*7)%6) * t.grow;
+        ctx.moveTo(v[1]+ox, v[2]+oy);
+        ctx.quadraticCurveTo(v[1]+ox+sway*.4, v[2]+oy-h*.6, v[1]+ox+sway, v[2]+oy-h);
+      }
+    }
+    ctx.stroke();
+    ctx.fillStyle='#f2cc3f';
+    ctx.beginPath();
+    for(const v of _vis){
+      const t=v[0]; if(!t.ripe) continue;
+      for(let k=0;k<5;k++){
+        const ox=STALK[k][0], oy=STALK[k][1];
+        const sway = Math.sin(G.t*1.6 + t.seed + k*0.5)*2.8;
+        const h = (19 + (k*7)%6) * t.grow;
+        for(let i=0;i<3;i++){
+          const cx = v[1]+ox+sway*(1-i*0.18), cy = v[2]+oy-h+i*3.6+1;
+          const rx = 2.6*t.grow, ry = 4.0*t.grow;
+          ctx.moveTo(cx+rx, cy);
+          ctx.ellipse(cx, cy, rx, ry, 0, 0, 6.29);
+        }
+      }
+    }
+    ctx.fill();
+    ctx.strokeStyle='#96742f'; ctx.lineWidth=2.4;
+    ctx.beginPath();
+    for(const v of _vis){
+      if(v[0].ripe) continue;
+      for(let k=0;k<3;k++){
+        const ox=STALK[k][0], oy=STALK[k][1];
+        ctx.moveTo(v[1]+ox, v[2]+oy); ctx.lineTo(v[1]+ox, v[2]+oy-5);
+      }
+      ctx.moveTo(v[1]+2, v[2]+4); ctx.lineTo(v[1]+11, v[2]+2);
+    }
+    ctx.stroke();
+  }
+}
+
+/* An apple tree. Fades out when the player would be hidden behind it. */
+function drawTree(t){
+  const q = iso(t.x, t.y);
+  if(!visible(q, 150)) return;
+  const a = player();
+  const behind = (t.x+t.y) > (a.x+a.y) &&
+                 Math.abs(iso(a.x,a.y).sx - q.sx) < 46 &&
+                 Math.abs(iso(a.x,a.y).sy - q.sy) < 78;
+  ctx.globalAlpha = behind ? 0.45 : 1;
+  const sway = Math.sin(G.t*0.9 + t.seed)*2.5;
+  ctx.fillStyle='#000'; ctx.globalAlpha *= 1;
+  const ga = ctx.globalAlpha;
+  ctx.globalAlpha = ga*0.22;
+  ctx.beginPath(); ctx.ellipse(q.sx, q.sy, 24, 12, 0,0,6.29); ctx.fill();
+  ctx.globalAlpha = ga;
+  ctx.fillStyle='#7a4a22'; ctx.fillRect(q.sx-6, q.sy-34, 12, 34);
+  ctx.fillStyle='#2f7a34';
+  ctx.beginPath(); ctx.ellipse(q.sx+sway, q.sy-58, 32, 27, 0,0,6.29); ctx.fill();
+  ctx.fillStyle='#3d9440';
+  ctx.beginPath(); ctx.ellipse(q.sx-11+sway, q.sy-68, 21, 18, 0,0,6.29); ctx.fill();
+  ctx.fillStyle='#4fae4a';
+  ctx.beginPath(); ctx.ellipse(q.sx+12+sway, q.sy-72, 16, 14, 0,0,6.29); ctx.fill();
+  if(t.ripe){
+    ctx.fillStyle='#d8402f';
+    const spots=[[-18,-50],[-4,-62],[13,-54],[3,-42],[22,-64],[-14,-70]];
+    for(let i=0;i<spots.length;i++){
+      const r = 5*t.grow;
+      ctx.beginPath(); ctx.arc(q.sx+spots[i][0]+sway*0.6, q.sy+spots[i][1], r, 0, 6.29); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function fenceLine(x0,y0,x1,y1){
+  const n = Math.max(2, Math.round(Math.hypot(x1-x0,y1-y0)*0.8));
+  for(let i=0;i<=n;i++){
+    const p = iso(lerp(x0,x1,i/n), lerp(y0,y1,i/n));
+    ctx.fillStyle='#8a5a2b';
+    ctx.fillRect(p.sx-2.5, p.sy-24, 5, 26);
+    ctx.fillStyle='#a9703a';
+    ctx.fillRect(p.sx-2.5, p.sy-24, 5, 4);
+  }
+  const a=iso(x0,y0), b=iso(x1,y1);
+  ctx.strokeStyle='#a9703a'; ctx.lineWidth=4; ctx.lineCap='round';
+  for(const dy of [-19,-9]){ ctx.beginPath(); ctx.moveTo(a.sx,a.sy+dy); ctx.lineTo(b.sx,b.sy+dy); ctx.stroke(); }
+}
+
+function drawDecorItem(d){
+  const p = iso(d.x, d.y), s = d.s;
+  if(!visible(p,120)) return;
+  ctx.globalAlpha=.22; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(p.sx, p.sy, 16*s, 8*s, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+  if(d.kind==='tree'){
+    const sway = Math.sin(G.t*0.9 + d.ph)*3;
+    ctx.fillStyle='#7a4a22'; ctx.fillRect(p.sx-5*s, p.sy-30*s, 10*s, 30*s);
+    ctx.fillStyle='#3f8f36';
+    ctx.beginPath(); ctx.ellipse(p.sx+sway, p.sy-52*s, 30*s, 26*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#4fae43';
+    ctx.beginPath(); ctx.ellipse(p.sx-9*s+sway, p.sy-60*s, 20*s, 17*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#63c455';
+    ctx.beginPath(); ctx.ellipse(p.sx+10*s+sway, p.sy-64*s, 14*s, 12*s, 0,0,6.29); ctx.fill();
+  } else if(d.kind==='bale'){
+    ctx.fillStyle='#e0a83c'; roundRect(p.sx-18*s, p.sy-26*s, 36*s, 26*s, 8*s); ctx.fill();
+    ctx.fillStyle='#c98f26'; roundRect(p.sx-18*s, p.sy-10*s, 36*s, 10*s, 5*s); ctx.fill();
+    ctx.strokeStyle='#a8750f'; ctx.lineWidth=2*s;
+    ctx.beginPath(); ctx.moveTo(p.sx-6*s,p.sy-26*s); ctx.lineTo(p.sx-6*s,p.sy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.sx+6*s,p.sy-26*s); ctx.lineTo(p.sx+6*s,p.sy); ctx.stroke();
+  } else if(d.kind==='bush'){
+    ctx.fillStyle='#478f3a';
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy-10*s, 18*s, 13*s,0,0,6.29); ctx.fill();
+    ctx.fillStyle='#58a846';
+    ctx.beginPath(); ctx.ellipse(p.sx-5*s, p.sy-16*s, 12*s, 9*s,0,0,6.29); ctx.fill();
+  } else {
+    ctx.fillStyle='#9aa0a6';
+    poly([[p.sx-14*s,p.sy],[p.sx-7*s,p.sy-14*s],[p.sx+6*s,p.sy-16*s],[p.sx+14*s,p.sy]], '#9aa0a6');
+    poly([[p.sx-7*s,p.sy-14*s],[p.sx+6*s,p.sy-16*s],[p.sx+14*s,p.sy],[p.sx+2*s,p.sy-4*s]], '#b6bcc2');
+  }
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+function drawBuilding(s){
+  const b = s.b, H = 74, RH = 40;
+  const N=iso(b.x,b.y), E=iso(b.x+b.w,b.y), S=iso(b.x+b.w,b.y+b.h), W=iso(b.x,b.y+b.h);
+  const up=(p,h)=>[p.sx, p.sy-h];
+  // shadow
+  ctx.globalAlpha=.25; ctx.fillStyle='#000';
+  poly([[N.sx,N.sy+6],[E.sx+8,E.sy+6],[S.sx,S.sy+8],[W.sx-8,W.sy+6]],'#000'); ctx.globalAlpha=1;
+  // walls
+  poly([up(W,0),up(S,0),up(S,H),up(W,H)], '#f0e2c6');          // front-left
+  poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#d8c8a8');          // front-right
+  // door
+  const dc = iso(b.x, b.y+b.h/2);
+  ctx.fillStyle='#8a5a2b'; roundRect(dc.sx-16, dc.sy-58, 32, 52, 6); ctx.fill();
+  ctx.fillStyle='#6d4520'; roundRect(dc.sx-12, dc.sy-53, 24, 47, 5); ctx.fill();
+  // gable roof
+  const along = b.w>=b.h;
+  let R1,R2,f1,f2;
+  if(along){
+    R1=[iso(b.x,b.y+b.h/2).sx, iso(b.x,b.y+b.h/2).sy-H-RH];
+    R2=[iso(b.x+b.w,b.y+b.h/2).sx, iso(b.x+b.w,b.y+b.h/2).sy-H-RH];
+    f1=[up(N,H),up(E,H),R2,R1]; f2=[up(W,H),up(S,H),R2,R1];
+  } else {
+    R1=[iso(b.x+b.w/2,b.y).sx, iso(b.x+b.w/2,b.y).sy-H-RH];
+    R2=[iso(b.x+b.w/2,b.y+b.h).sx, iso(b.x+b.w/2,b.y+b.h).sy-H-RH];
+    f1=[up(N,H),up(W,H),R2,R1]; f2=[up(E,H),up(S,H),R2,R1];
+  }
+  poly(f1, shade(s.roof,-28), '#00000022', 2);
+  poly(f2, s.roof, '#00000022', 2);
+  ctx.globalAlpha=.16; poly(f2.map(p=>p), '#fff'); ctx.globalAlpha=1;
+  // what makes each building itself
+  const mid = iso(b.x+b.w/2, b.y+b.h/2);
+  const topY = mid.sy - H - RH;
+  if(s.motif==='sails'){
+    const cx = mid.sx, cy = topY - 34, ang = G.t*0.85;
+    for(let i=0;i<4;i++){
+      const a1 = ang + i*Math.PI/2;
+      const ex = cx + Math.cos(a1)*62, ey = cy + Math.sin(a1)*62;
+      ctx.strokeStyle='#6b4a28'; ctx.lineWidth=7; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(a1);
+      ctx.fillStyle='#fdf6e6'; ctx.strokeStyle='#b9a37c'; ctx.lineWidth=2.5;
+      roundRect(-32, -13, 32, 26, 4); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle='#d9cbaa'; ctx.lineWidth=2;
+      for(let k=1;k<4;k++){ ctx.beginPath(); ctx.moveTo(-32+k*8, -13); ctx.lineTo(-32+k*8, 13); ctx.stroke(); }
+      ctx.restore();
+    }
+    ctx.fillStyle='#4a3418'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, 6.29); ctx.fill();
+    ctx.fillStyle='#8a6a3c'; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.29); ctx.fill();
+  } else if(s.motif==='silo'){
+    const q = iso(b.x+b.w, b.y+b.h*0.25);
+    ctx.fillStyle='#cfd6da'; roundRect(q.sx-2, q.sy-H-58, 26, 82, 6); ctx.fill();
+    ctx.fillStyle='#9fb0ba'; roundRect(q.sx-2, q.sy-H-58, 26, 16, 6); ctx.fill();
+  } else if(s.motif==='chimney'){
+    const q = iso(b.x+b.w*0.3, b.y+b.h*0.3);
+    ctx.fillStyle='#8d5a3c'; ctx.fillRect(q.sx-8, topY-26, 17, 40);
+    ctx.fillStyle='#a86c49'; ctx.fillRect(q.sx-8, topY-26, 17, 6);
+    ctx.fillStyle='rgba(255,255,255,.55)';
+    for(let i=0;i<3;i++){
+      const t = (G.t*0.5 + i/3) % 1;
+      ctx.globalAlpha = (1-t)*0.55;
+      ctx.beginPath(); ctx.arc(q.sx, topY-32-t*46, 5+t*9, 0, 6.29); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  } else if(s.motif==='perch'){
+    const q = iso(b.x+b.w*0.5, b.y+b.h*0.5);
+    ctx.strokeStyle='#6b4a28'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(q.sx, topY+4); ctx.lineTo(q.sx, topY-22); ctx.stroke();
+    ctx.fillStyle='#d9483f';
+    poly([[q.sx-2,topY-30],[q.sx+18,topY-24],[q.sx-2,topY-18]], '#d9483f');
+    ctx.fillStyle='#4a3418'; ctx.beginPath(); ctx.arc(q.sx-2, topY-24, 5, 0, 6.29); ctx.fill();
+  } else if(s.motif==='vent'){
+    const q = iso(b.x+b.w*0.5, b.y+b.h*0.5);
+    ctx.fillStyle='#8d9aa2'; roundRect(q.sx-13, topY-18, 26, 16, 5); ctx.fill();
+    ctx.fillStyle='#5d6a72'; roundRect(q.sx-9, topY-13, 18, 6, 3); ctx.fill();
+  } else if(s.motif==='flag'){
+    const q = iso(b.x+b.w*0.5, b.y+b.h*0.5);
+    ctx.strokeStyle='#6b4a28'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(q.sx, topY+2); ctx.lineTo(q.sx, topY-34); ctx.stroke();
+    const w = Math.sin(G.t*3)*3;
+    ctx.fillStyle='#f4d03f';
+    poly([[q.sx,topY-34],[q.sx+26,topY-28+w],[q.sx,topY-20]], '#f4d03f');
+  }
+  signBoard(mid.sx, mid.sy-H-RH-26, s.name);
+}
+
+function shade(hex, amt){
+  const n = parseInt(hex.slice(1),16);
+  const r=clamp(((n>>16)&255)+amt,0,255), g=clamp(((n>>8)&255)+amt,0,255), b=clamp((n&255)+amt,0,255);
+  return 'rgb('+r+','+g+','+b+')';
+}
+
+function signBoard(sx, sy, text){
+  ctx.font = '900 19px system-ui, sans-serif';
+  const w = ctx.measureText(text).width + 26;
+  ctx.fillStyle='#000'; ctx.globalAlpha=.2; roundRect(sx-w/2+3, sy-15, w, 32, 10); ctx.fill(); ctx.globalAlpha=1;
+  ctx.fillStyle='#fff8e6'; roundRect(sx-w/2, sy-18, w, 32, 10); ctx.fill();
+  ctx.strokeStyle='#c9a96a'; ctx.lineWidth=3; roundRect(sx-w/2, sy-18, w, 32, 10); ctx.stroke();
+  ctx.fillStyle='#7a4f1d'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(text, sx, sy);
+}
+
+/* ------------------------------------------------------------ items */
+function drawItem(kind, x, y, s){
+  s = s||1;
+  if(kind==='wheat'){
+    ctx.strokeStyle='#d9a41c'; ctx.lineWidth=2.4*s; ctx.lineCap='round';
+    for(let k=-1;k<=1;k++){
+      ctx.beginPath(); ctx.moveTo(x, y+7*s); ctx.lineTo(x+k*5*s, y-9*s); ctx.stroke();
+      ctx.fillStyle='#f7d54a';
+      ctx.beginPath(); ctx.ellipse(x+k*5*s, y-10*s, 3.4*s, 5.4*s, k*0.3, 0, 6.29); ctx.fill();
+    }
+    ctx.strokeStyle='#b5771a'; ctx.lineWidth=2.6*s;
+    ctx.beginPath(); ctx.moveTo(x-5*s,y+2*s); ctx.lineTo(x+5*s,y+2*s); ctx.stroke();
+  } else if(kind==='egg'){
+    ctx.fillStyle='#fffdf4';
+    ctx.beginPath(); ctx.ellipse(x, y, 6*s, 7.6*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#e3dcc6';
+    ctx.beginPath(); ctx.ellipse(x+2*s, y+1.5*s, 3*s, 4*s, 0,0,6.29); ctx.fill();
+  } else if(kind==='apple'){
+    ctx.fillStyle='#d8402f';
+    ctx.beginPath(); ctx.arc(x, y, 7*s, 0, 6.29); ctx.fill();
+    ctx.fillStyle='#ef6a55';
+    ctx.beginPath(); ctx.arc(x-2.4*s, y-2.4*s, 2.6*s, 0, 6.29); ctx.fill();
+    ctx.strokeStyle='#6b4a22'; ctx.lineWidth=1.6*s;
+    ctx.beginPath(); ctx.moveTo(x, y-6*s); ctx.lineTo(x+1*s, y-9.5*s); ctx.stroke();
+    ctx.fillStyle='#3d9440';
+    ctx.beginPath(); ctx.ellipse(x+4*s, y-9*s, 3.4*s, 1.9*s, -0.5, 0, 6.29); ctx.fill();
+  } else if(kind==='flour'){
+    ctx.fillStyle='#efe4cb';
+    roundRect(x-6.5*s, y-5*s, 13*s, 12*s, 3.5*s); ctx.fill();
+    ctx.fillStyle='#dccfb0';
+    roundRect(x-6.5*s, y+1*s, 13*s, 6*s, 3*s); ctx.fill();
+    ctx.strokeStyle='#b9a888'; ctx.lineWidth=2*s;
+    ctx.beginPath(); ctx.moveTo(x-4*s, y-5*s); ctx.lineTo(x+4*s, y-5*s); ctx.stroke();
+    ctx.fillStyle='#c0a97e';
+    ctx.beginPath(); ctx.ellipse(x, y-6.5*s, 4.5*s, 2.2*s, 0,0,6.29); ctx.fill();
+  } else if(kind==='milk'){
+    ctx.fillStyle='#e8eef2';
+    roundRect(x-5*s, y-7*s, 10*s, 14*s, 2.5*s); ctx.fill();
+    ctx.fillStyle='#cdd8de';
+    roundRect(x-5*s, y+2*s, 10*s, 5*s, 2.5*s); ctx.fill();
+    ctx.fillStyle='#9fb0ba';
+    roundRect(x-3*s, y-9.5*s, 6*s, 3.5*s, 1.5*s); ctx.fill();
+  } else if(kind==='cheese'){
+    ctx.fillStyle='#f2c33c';
+    poly([[x-9*s,y+5*s],[x+9*s,y+5*s],[x+9*s,y-2*s],[x-9*s,y+5*s]], '#f2c33c');
+    ctx.fillStyle='#ffdf6b';
+    poly([[x-9*s,y+5*s],[x+9*s,y-2*s],[x+9*s,y-5*s],[x-9*s,y+2*s]], '#ffdf6b');
+    ctx.fillStyle='#d9a923';
+    ctx.beginPath(); ctx.arc(x+3*s, y+2*s, 1.6*s, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(x-2*s, y+3.6*s, 1.2*s, 0, 6.29); ctx.fill();
+  } else if(kind==='jam'){
+    ctx.fillStyle='#b8305f';
+    roundRect(x-5.5*s, y-4*s, 11*s, 11*s, 2.5*s); ctx.fill();
+    ctx.fillStyle='#d94d7e';
+    roundRect(x-5.5*s, y-4*s, 11*s, 4*s, 2*s); ctx.fill();
+    ctx.fillStyle='#e8d9b5';
+    roundRect(x-6.5*s, y-7.5*s, 13*s, 4*s, 1.8*s); ctx.fill();
+  } else {
+    ctx.fillStyle='#c98244';
+    ctx.beginPath(); ctx.ellipse(x, y+2*s, 10*s, 6*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#eab473';
+    ctx.beginPath(); ctx.ellipse(x, y-1*s, 9.5*s, 6*s, 0,0,6.29); ctx.fill();
+    ctx.strokeStyle='#c98244'; ctx.lineWidth=1.6*s;
+    for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(x-8*s+k*0, y-3*s+k*3*s); ctx.lineTo(x+8*s, y-3*s+k*3*s); ctx.stroke(); }
+  }
+}
+
+/* ------------------------------------------------------------ trays */
+function drawTray(s, tr){
+  const col = tr.mode==='in' ? '#3f8ad8' : tr.mode==='out' ? '#3fb85e' : '#e0a400';
+  const pulse = 0.5 + 0.5*Math.sin(G.t*3);
+  quad(tr.x, tr.y, tr.w, tr.h, '#000', .18);
+  quad(tr.x+.08, tr.y+.08, tr.w-.16, tr.h-.16, col, .55+0.18*pulse);
+  const c = rectCenter(tr), p = iso(c.x, c.y);
+
+  if(tr.mode==='sell'){
+    ctx.font='900 26px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.strokeStyle='#8a5a00'; ctx.lineWidth=5;
+    ctx.strokeText('SELL', p.sx, p.sy-6); ctx.fillText('SELL', p.sx, p.sy-6);
+    const shown = ['wheat'].concat(station('coop').unlocked?['egg']:[], station('bakery').unlocked?['pie']:[]);
+    ctx.font='900 14px system-ui,sans-serif'; ctx.fillStyle='#fff'; ctx.lineWidth=4;
+    shown.forEach((k,i)=>{
+      const x = p.sx + (i-(shown.length-1)/2)*54;
+      drawItem(k, x-11, p.sy+18, .8);
+      ctx.strokeText('$'+ITEMS[k].price, x+11, p.sy+18);
+      ctx.fillText('$'+ITEMS[k].price, x+11, p.sy+18);
+    });
+    return;
+  }
+  const n = tr.mode==='in' ? s.bin[tr.item] : s.out;
+  for(let i=0;i<Math.min(n,18);i++){
+    const col2 = i%3, row = Math.floor(i/3);
+    drawItem(tr.item, p.sx + (col2-1)*15, p.sy + 4 - row*7 - (row%2)*2, 0.85);
+  }
+  ctx.font='900 17px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#fff'; ctx.strokeStyle='#00000066'; ctx.lineWidth=4;
+  const lbl = (tr.mode==='in'?'FEED ':'TAKE ') + n;
+  ctx.strokeText(lbl, p.sx, p.sy+24); ctx.fillText(lbl, p.sx, p.sy+24);
+}
+
+/* ------------------------------------------------------------ pads */
+function drawPadGround(p){
+  const lv = G.up[p.id]||0;
+  if(lv>=p.max || !p.show()) return;
+  const pulse = 0.5+0.5*Math.sin(G.t*4 + p.x);
+  quad(p.x-1.05, p.y-1.05, 2.1, 2.1, '#000', .2);
+  quad(p.x-1, p.y-1, 2, 2, p.active ? '#ffe680' : '#6fd0ff', p.active? .55+.25*pulse : .3+.12*pulse);
+}
+
+function drawPadPanel(p){
+  const lv = G.up[p.id]||0;
+  if(lv>=p.max || !p.show()) return;
+  const cost = padCost(p), paid = G.paid[p.id], f = clamp(paid/cost,0,1);
+  const s = iso(p.x, p.y);
+  if(!visible(s,200)) return;
+  const W = 120, H = 72, y0 = s.sy - 116;
+  ctx.globalAlpha=.85;
+  ctx.fillStyle='#2a1c0e'; roundRect(s.sx-W/2, y0, W, H, 14); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.strokeStyle = p.active? '#ffe680':'#6fd0ff'; ctx.lineWidth=3;
+  roundRect(s.sx-W/2, y0, W, H, 14); ctx.stroke();
+
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='23px system-ui,sans-serif'; ctx.fillText(p.icon, s.sx, y0+19);
+  ctx.font='900 13px system-ui,sans-serif'; ctx.fillStyle='#fff';
+  ctx.fillText(p.name, s.sx, y0+36);
+  ctx.font='700 10px system-ui,sans-serif'; ctx.fillStyle='#cdbfa8';
+  ctx.fillText(p.desc(lv+1), s.sx, y0+49);
+
+  // cost bar
+  const bw=W-24, bx=s.sx-bw/2, by=y0+H-16;
+  ctx.fillStyle='#000'; roundRect(bx,by,bw,13,7); ctx.fill();
+  ctx.fillStyle='#ffd23d'; roundRect(bx,by,Math.max(6,bw*f),13,7); ctx.fill();
+  ctx.font='900 12px system-ui,sans-serif'; ctx.fillStyle= f>0.5?'#4a3418':'#fff';
+  ctx.fillText('$'+fmt(Math.ceil(cost-paid)), s.sx, by+6.5);
+  // stem
+  ctx.strokeStyle= p.active? '#ffe680':'#6fd0ff'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(s.sx, y0+H); ctx.lineTo(s.sx, s.sy-10); ctx.stroke();
+}
+
+/* ------------------------------------------------------------ people */
+function drawPerson(a, sx, sy, tint, opts){
+  opts = opts||{};
+  const bob = Math.sin(a.bob*2)*3, step = Math.sin(a.bob*4);
+  const flip = Math.cos(a.face) - Math.sin(a.face) < 0 ? -1 : 1;  // screen-facing
+  ctx.globalAlpha=.25; ctx.fillStyle='#000';
+  ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7.5, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+
+  // legs
+  ctx.fillStyle='#3c5fa0';
+  roundRect(sx-9, sy-16+ (a.moving? Math.max(0,step)*-3:0), 8, 18, 4); ctx.fill();
+  roundRect(sx+1, sy-16+ (a.moving? Math.max(0,-step)*-3:0), 8, 18, 4); ctx.fill();
+  // torso
+  ctx.fillStyle=tint; roundRect(sx-12, sy-40+bob, 24, 27, 9); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.22)'; roundRect(sx-12, sy-40+bob, 24, 9, 6); ctx.fill();
+  // arms
+  ctx.fillStyle=tint;
+  roundRect(sx-16, sy-38+bob+(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
+  roundRect(sx+9,  sy-38+bob-(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
+  // head
+  const hy = sy-50+bob;
+  ctx.fillStyle='#f4c79c'; ctx.beginPath(); ctx.arc(sx, hy, 11.5, 0, 6.29); ctx.fill();
+  ctx.fillStyle=opts.hair||'#5b3a1c';
+  ctx.beginPath(); ctx.arc(sx, hy-2, 11.5, Math.PI*1.03, Math.PI*2.05); ctx.fill();
+  ctx.fillStyle='#3a2a1a';
+  ctx.beginPath(); ctx.arc(sx+flip*2-3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx+flip*2+3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  ctx.strokeStyle='#b5745a'; ctx.lineWidth=1.6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(sx+flip*2, hy+4.5, 3.2, 0.35, Math.PI-0.35); ctx.stroke();
+
+  // scythe swing while cutting
+  if(a.cut>0){
+    const ang = -0.9 + Math.sin(G.t*13)*0.75;
+    ctx.save(); ctx.translate(sx+flip*13, sy-28+bob); ctx.rotate(ang*flip); ctx.scale(flip,1);
+    ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,8); ctx.lineTo(0,-22); ctx.stroke();
+    ctx.strokeStyle='#d8dde2'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.arc(-14,-20, 15, -0.2, 1.25); ctx.stroke();
+    ctx.restore();
+  }
+
+  // carried stack
+  const order = ['wheat','egg','pie'];
+  const total = carried(a), SHOW = 9, STEP = 8.5;
+  let idx = 0;
+  for(const k of order){
+    for(let i=0;i<a.carry[k];i++){
+      if(idx>=SHOW) break;
+      const wob = Math.sin(G.t*6 + idx*0.6)*1.5 + (a.moving? Math.sin(a.bob*4+idx)*1.1:0);
+      drawItem(k, sx+wob, sy-62+bob-idx*STEP, 0.9);
+      idx++;
+    }
+  }
+  if(total>SHOW){
+    const ty = sy-62+bob-SHOW*STEP-6;
+    ctx.font='900 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='#fff'; ctx.strokeStyle='#00000099'; ctx.lineWidth=4;
+    ctx.strokeText('+'+(total-SHOW), sx, ty); ctx.fillText('+'+(total-SHOW), sx, ty);
+  }
+}
+
+function drawBoard(){
+  const c = rectCenter(BOARD), q = iso(c.x, c.y);
+  if(!visible(q, 240)) return;
+  const pulse = 0.5+0.5*Math.sin(G.t*3);
+  quad(BOARD.x, BOARD.y, BOARD.w, BOARD.h, '#000', .18);
+  quad(BOARD.x+.08, BOARD.y+.08, BOARD.w-.16, BOARD.h-.16, '#8ed0ff', .32+.14*pulse);
+
+  // posts
+  ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=6; ctx.lineCap='round';
+  for(const dx of [-30, 30]){ ctx.beginPath(); ctx.moveTo(q.sx+dx, q.sy); ctx.lineTo(q.sx+dx, q.sy-96); ctx.stroke(); }
+
+  const rows = G.orders.length, H = 34 + rows*36, W = 176, y0 = q.sy - 96 - H;
+  ctx.fillStyle='#6b4a28'; roundRect(q.sx-W/2-5, y0-5, W+10, H+10, 10); ctx.fill();
+  ctx.fillStyle='#f6ecd2'; roundRect(q.sx-W/2, y0, W, H, 7); ctx.fill();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='900 14px system-ui,sans-serif'; ctx.fillStyle='#a8560f';
+  ctx.fillText('TOWN ORDERS', q.sx, y0+15);
+
+  G.orders.forEach((o,i)=>{
+    const ry = y0 + 34 + i*36;
+    ctx.fillStyle = i%2 ? '#efe3c4' : '#f6ecd2';
+    roundRect(q.sx-W/2+5, ry-14, W-10, 32, 6); ctx.fill();
+    const keys = Object.keys(o.need);
+    keys.forEach((k,j)=>{
+      const x = q.sx - W/2 + 22 + j*52;
+      drawItem(k, x, ry-1, .62);
+      ctx.font='900 13px system-ui,sans-serif'; ctx.textAlign='left';
+      ctx.fillStyle = o.need[k]<=0 ? '#3f9b4a' : '#4a3418';
+      ctx.fillText(o.need[k]<=0 ? '\u2713' : 'x'+o.need[k], x+9, ry-1);
+    });
+    ctx.textAlign='right'; ctx.font='900 14px system-ui,sans-serif'; ctx.fillStyle='#2e8b3f';
+    ctx.fillText('$'+fmt(o.pay), q.sx+W/2-10, ry-1);
+    ctx.textAlign='center';
+  });
+}
+
+function drawStandPad(){
+  const pulse = 0.5 + 0.5*Math.sin(G.t*3);
+  const anyone = customers.some(c=>c.state==='wait' && c.n>0);
+  quad(STAND.x, STAND.y, STAND.w, STAND.h, '#000', .18);
+  quad(STAND.x+.08, STAND.y+.08, STAND.w-.16, STAND.h-.16,
+       anyone ? '#e0a400' : '#8a8f7a', anyone ? .55+0.2*pulse : .34);
+  const c = rectCenter(STAND), p = iso(c.x, c.y);
+  ctx.font='900 21px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#fff'; ctx.strokeStyle='#6b4a00'; ctx.lineWidth=5;
+  ctx.strokeText('SERVE', p.sx, p.sy-4); ctx.fillText('SERVE', p.sx, p.sy-4);
+}
+
+function lerpPt(a, b, t){ return [lerp(a.sx,b.sx,t), lerp(a.sy,b.sy,t)]; }
+
+function drawStall(){
+  const b = STALL, H = 30, AH = 76;
+  const N=iso(b.x,b.y), E=iso(b.x+b.w,b.y), S=iso(b.x+b.w,b.y+b.h), W=iso(b.x,b.y+b.h);
+  const up=(p,h)=>[p.sx, p.sy-h];
+  ctx.globalAlpha=.22; poly([[N.sx,N.sy+5],[E.sx+6,E.sy+5],[S.sx,S.sy+7],[W.sx-6,W.sy+5]],'#000'); ctx.globalAlpha=1;
+  // counter
+  poly([up(W,0),up(S,0),up(S,H),up(W,H)], '#c08b4e');
+  poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#a87740');
+  poly([up(N,H),up(E,H),up(S,H),up(W,H)], '#e8d3ac');
+  // produce sitting on the counter
+  const shown = wantedItems();
+  shown.forEach((k,i)=>{
+    const q = iso(b.x+0.5+i*0.75, b.y+b.h/2);
+    drawItem(k, q.sx, q.sy-H-4, 0.85);
+  });
+  // posts
+  ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=5; ctx.lineCap='round';
+  for(const c of [W,S,E,N]){ ctx.beginPath(); ctx.moveTo(c.sx, c.sy); ctx.lineTo(c.sx, c.sy-AH); ctx.stroke(); }
+  // striped awning
+  const nUp=[N.sx,N.sy-AH], eUp=[E.sx,E.sy-AH], sUp=[S.sx,S.sy-AH], wUp=[W.sx,W.sy-AH];
+  poly([nUp,eUp,sUp,wUp], '#fdf6e6');
+  const NU={sx:nUp[0],sy:nUp[1]}, EU={sx:eUp[0],sy:eUp[1]}, SU={sx:sUp[0],sy:sUp[1]}, WU={sx:wUp[0],sy:wUp[1]};
+  const bands = 6;
+  for(let i=0;i<bands;i+=2){
+    poly([ lerpPt(NU,EU,i/bands), lerpPt(NU,EU,(i+1)/bands),
+           lerpPt(WU,SU,(i+1)/bands), lerpPt(WU,SU,i/bands) ], '#d9483f');
+  }
+  poly([nUp,eUp,sUp,wUp], null, '#00000022', 2);
+  const mid = iso(b.x+b.w/2, b.y+b.h/2);
+  signBoard(mid.sx, mid.sy-AH-26, 'FARM STAND');
+}
+
+function drawCustomer(c){
+  const p = iso(c.x, c.y);
+  drawPerson(c, p.sx, p.sy, c.tint, {hair:'#3d2a16'});
+  if(c.happy>0){
+    ctx.font='22px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.globalAlpha = clamp(c.happy,0,1);
+    ctx.fillText('\u2764\uFE0F', p.sx, p.sy-92);
+    ctx.globalAlpha = 1;
+    return;
+  }
+  if(c.state!=='wait' || c.n<=0) return;
+  const bx = p.sx+30, by = p.sy-84 - (c.slot>0 ? (c.slot%2)*24 : 0);
+  const w = 68, h = 38;
+  ctx.fillStyle='#fff'; roundRect(bx-w/2, by-h/2, w, h, 13); ctx.fill();
+  poly([[bx-16,by+h/2-2],[bx-4,by+h/2-2],[bx-20,by+h/2+13]], '#fff');
+  drawItem(c.want, bx-20, by-2, .74);
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.font='900 15px system-ui,sans-serif'; ctx.fillStyle='#4a3418';
+  ctx.fillText('x'+c.n, bx-7, by-7);
+  ctx.font='900 13px system-ui,sans-serif'; ctx.fillStyle='#2e8b3f';
+  ctx.fillText('$'+standPrice(c.want), bx-7, by+9);
+}
+
+/* ------------------------------------------------------------ frame */
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,CW,CH);
+  const g = ctx.createLinearGradient(0,0,0,CH);
+  g.addColorStop(0,'#8fd45c'); g.addColorStop(1,'#59a03a');
+  ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+
+  const shx = shake? rnd(-shake,shake):0, shy = shake? rnd(-shake,shake):0;
+  ctx.save();
+  ctx.translate(CW/2+shx, CH/2+shy); ctx.scale(ZOOM,ZOOM); ctx.translate(-cam.x,-cam.y);
+  view = { x0:cam.x-CW/(2*ZOOM), x1:cam.x+CW/(2*ZOOM), y0:cam.y-CH/(2*ZOOM), y1:cam.y+CH/(2*ZOOM) };
+
+  drawGround();
+  drawCrops();
+
+  // fences around the field
+  const F = PATCHES[0].rect;
+  fenceLine(F.x-1, F.y-1, F.x+F.w+1, F.y-1);
+  fenceLine(F.x-1, F.y-1, F.x-1, F.y+F.h+1);
+  fenceLine(F.x+F.w+1, F.y-1, F.x+F.w+1, F.y+F.h+1);
+
+  for(const s of STATIONS){ if(s.unlocked) for(const tr of s.trays) drawTray(s, tr); }
+  for(const p of PADS) drawPadGround(p);
+  drawStandPad();
+  drawBoard();
+
+  // depth-sorted entities
+  const list = [];
+  for(const d of decor) list.push({ d:d.x+d.y, f:()=>drawDecorItem(d) });
+  for(const p of PATCHES){
+    if(!patchOpen(p) || p.kind!=='tree') continue;
+    for(const t of p.nodes) list.push({ d:t.x+t.y, f:()=>drawTree(t) });
+  }
+  for(const s of STATIONS){ if(s.unlocked) list.push({ d:(s.b.x+s.b.w/2)+(s.b.y+s.b.h/2), f:()=>drawBuilding(s) }); }
+  for(const a of actors){
+    const p = iso(a.x,a.y);
+    list.push({ d:a.x+a.y+0.01, f:()=>drawPerson(a, p.sx, p.sy, a.tint, {hair:a.hand?'#2e2016':'#7a4a1e'}) });
+  }
+  for(const c of customers){ list.push({ d:c.x+c.y, f:()=>drawCustomer(c) }); }
+  list.push({ d:(STALL.x+STALL.w/2)+(STALL.y+STALL.h/2), f:drawStall });
+  for(const f of flyers){
+    const x = lerp(f.x0,f.x1,f.t), y = lerp(f.y0,f.y1,f.t);
+    const z = Math.sin(f.t*Math.PI)*f.h + 0.6;
+    const p = iso(x,y);
+    list.push({ d:x+y+0.4, f:()=>{ ctx.save(); ctx.translate(p.sx, p.sy - z*TH*0.9); ctx.rotate(f.t*f.spin); drawItem(f.item,0,0,1); ctx.restore(); } });
+  }
+  list.sort((a,b)=>a.d-b.d);
+  for(const e of list) e.f();
+
+  for(const p of PADS) drawPadPanel(p);
+
+  // particles + popups on top
+  for(const p of puffs){
+    const s = iso(p.x,p.y);
+    ctx.globalAlpha = clamp(1-p.t/p.life,0,1);
+    ctx.fillStyle=p.col;
+    ctx.beginPath(); ctx.arc(s.sx, s.sy - p.z*TH*0.9, p.r, 0, 6.29); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  for(const p of pops){
+    const s = iso(p.x,p.y), k = p.t/1.1;
+    ctx.globalAlpha = clamp(1.6-k*1.6,0,1);
+    ctx.font = '900 '+(p.big?34:24)+'px system-ui,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    const yy = s.sy - p.z*TH*0.9 - k*54;
+    ctx.strokeStyle='#00000099'; ctx.lineWidth=6; ctx.strokeText(p.txt, s.sx, yy);
+    ctx.fillStyle=p.col; ctx.fillText(p.txt, s.sx, yy);
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+
+  // ---- screen space ----
+  for(const c of coinFx){
+    const t=c.t, mt=1-t;
+    const x = mt*mt*c.x + 2*mt*t*c.cx + t*t*c.x1;
+    const y = mt*mt*c.y + 2*mt*t*c.cy + t*t*c.y1;
+    ctx.fillStyle='#4caf50'; ctx.strokeStyle='#2e7d32'; ctx.lineWidth=2;
+    roundRect(x-c.r, y-c.r*0.68, c.r*2, c.r*1.36, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#a5e8a8'; ctx.beginPath(); ctx.arc(x,y,c.r*0.35,0,6.29); ctx.fill();
+  }
+  if(stick.on){
+    ctx.globalAlpha=.3; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(stick.ox, stick.oy, 66, 0, 6.29); ctx.fill();
+    ctx.globalAlpha=.55; ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(stick.ox+stick.dx*60, stick.oy+stick.dy*60, 30, 0, 6.29); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+/* =======================================================================
+   HUD / UI
+   ===================================================================== */
+const el = id=>document.getElementById(id);
+const hudVal = {};
+function setPill(id, v, show){
+  const node = el(id);
+  node.classList.toggle('hide', !show);
+  if(hudVal[id]===v) return;
+  hudVal[id]=v;
+  node.querySelector('span').textContent = v;
+  bumpPill(id);
+}
+function bumpPill(id){
+  const n = el(id); n.classList.remove('bump');
+  void n.offsetWidth; n.classList.add('bump');
+  setTimeout(()=>n.classList.remove('bump'), 130);
+}
+function buildPills(){
+  const box = el('res');
+  for(const k of ITEM_ORDER){
+    if(el('p-'+k)) continue;
+    const d = document.createElement('div');
+    d.className = 'pill pop hide'; d.id = 'p-'+k;
+    d.innerHTML = '<i>'+ITEMS[k].pill+'</i><span>0</span>';
+    box.appendChild(d);
+  }
+}
+function syncHUD(){
+  const a = player();
+  setPill('p-coin', fmt(G.coins), true);
+  const open = availableItems();
+  for(const k of ITEM_ORDER)
+    setPill('p-'+k, a.carry[k], a.carry[k] > 0 || (k==='wheat' && open.length<2));
+  const prev = levelReq(G.level-1), next = levelReq(G.level);
+  el('levelfill').style.width = clamp((G.earned-prev)/(next-prev)*100,0,100)+'%';
+  el('lvltxt').textContent = 'LEVEL '+G.level+'  ·  $'+fmt(G.earned);
+}
+
+function hint(key, text, force){
+  if(chapterT > 0) return;
+  if(G.seenHint[key] && !force) return;
+  G.seenHint[key]=1;
+  el('hint').textContent = text;
+  el('hint').classList.add('on');
+  hintTimer = 5;
+}
+
+let chapterT = 0;
+function showChapter(c){
+  const box = el('chapter');
+  box.querySelector('.ch-i').textContent = c.icon;
+  box.querySelector('.ch-t').textContent = c.title;
+  box.querySelector('.ch-b').textContent = c.text;
+  box.classList.add('on');
+  el('hint').classList.remove('on');
+  hintTimer = 0;
+  chapterT = 11;
+  sfx.levelup();
+}
+
+function openJournal(){
+  let html = '<div id="jrn">';
+  for(const c of STORY){
+    if(G.story[c.id]) html += '<div class="e"><b>'+c.icon+'  '+c.title+'</b><span>'+c.text+'</span></div>';
+    else { html += '<div class="e lock"><b>\u{1F512}  ?</b><span>Not yet.</span></div>'; break; }
+  }
+  html += '</div>';
+  modal('The Hollowbrook Journal', html, 'CLOSE');
+}
+
+function modal(title, html, btn){
+  el('m-title').textContent = title;
+  el('m-body').innerHTML = html;
+  el('m-ok').textContent = btn||'OK';
+  el('modal').classList.add('on');
+}
+el('m-ok').onclick = ()=>{ el('modal').classList.remove('on'); if(pendingReset){ pendingReset=false; doReset(); } };
+let pendingReset = false;
+
+function winModal(){
+  modal('HARVEST FESTIVAL',
+    '<p>Hollowbrook is a working valley again \u2014 the mill turning, the ovens lit, '+
+    'the road busy with people who came for what you grew.</p>'+
+    '<p class="sub">Gran would be unbearable about it. Keep playing \u2014 the pads go higher.</p>', 'RAISE A GLASS');
+}
+
+el('b-journal').onclick = openJournal;
+el('b-sound').onclick = ()=>{
+  G.sound = !G.sound;
+  el('b-sound').innerHTML = G.sound ? '&#128266;' : '&#128263;';
+  save();
+};
+el('b-reset').onclick = ()=>{
+  pendingReset = true;
+  modal('Start a fresh farm?', '<p>This wipes your coins, upgrades and farmhands.</p>', 'WIPE IT');
+};
+function doReset(){
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  const snd = G.sound;
+  resetGame(); G.sound = snd;
+  buildDecor();
+  cam.x = iso(player().x, player().y).sx; cam.y = iso(player().x, player().y).sy;
+  hint('move','Drag anywhere to move. Sweep through the wheat!', true);
+}
+
+/* =======================================================================
+   BOOT
+   ===================================================================== */
+function init(){
+  let raw=null; try{ raw = localStorage.getItem(SAVE_KEY); }catch(e){}
+  resetGame();
+  if(raw){ try{ localStorage.setItem(SAVE_KEY, raw); }catch(e){} load(); }
+  buildDecor();
+  resize();
+  const p = iso(player().x, player().y); cam.x=p.sx; cam.y=p.sy;
+  el('b-sound').innerHTML = G.sound ? '&#128266;' : '&#128263;';
+  buildPills();
+  syncHUD();
+  hint('move','Drag anywhere to move. Sweep through the wheat!');
+  checkStory();
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now-last)/1000);
+  last = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+init();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

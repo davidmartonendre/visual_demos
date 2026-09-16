@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌾 Harvest Hero
 
-## Getting Started
+A cosy isometric farm tycoon that runs in one HTML file.
 
-First, run the development server:
+You've inherited your gran's farm in **Hollowbrook**, a valley that went quiet when
+the old mill stopped turning. Sweep the wheat, restart the mill, put the ovens back
+to work, and the village comes back with it — told in eleven short chapters as you
+rebuild, from Gran's letter to the Harvest Festival.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Play it
+
+Open `index.html` in a browser. That's it — no build step, no dependencies, no server.
+
+```
+git clone <this repo> && open index.html
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Works on desktop and phones.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Controls
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| | |
+|---|---|
+| **Touch** | Drag anywhere — a virtual stick appears under your thumb |
+| **Keyboard** | `WASD` or arrow keys |
 
-## Learn More
+Harvesting, hauling, buying and selling are all automatic — you only steer. Walk into
+things to make them happen.
 
-To learn more about Next.js, take a look at the following resources:
+## The valley
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Everything starts as a wheat field and a market. Each upgrade pad you pay off opens
+another piece of the chain:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+                     ┌─ WINDMILL ──── flour ─┐
+  wheat field ───────┼─ CHICKEN COOP ─ eggs ─┴─ BAKERY ─── pies
+       │             │
+       │             └─ DAIRY BARN ─── milk ─── CHEESE CELLAR ─ cheese
+       │
+  orchard ─────────── apples ───────── JAM KITCHEN ─────────── jam
+```
 
-## Deploy on Vercel
+Eight goods, six workshops, and prices that climb steeply the further along a chain
+you go — wheat is $3, a pie is $46, cheese is $52.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Who buys it
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Three buyers, each wanting something different from you:
+
+- **The market** takes anything, any quantity, at list price. The reliable one.
+- **The farm stand** on the village road: villagers queue up with an order bubble and
+  pay **70% over market** — but only for what they're actually asking for.
+- **The town order board** north of the market posts two bundles at a time
+  (*"6 milk + 8 apples"*) and pays **2.3×** for filling one. Orders re-roll as your
+  farm learns to make better things.
+
+Serving people is the one job your farmhands never do for you.
+
+## Upgrades
+
+Thirteen pads along the village street. Stand on one and your coins pour in until
+it's paid off.
+
+- **Backpack** — cheap to climb, 20 levels, 12 → **1,012** items carried
+- **Scythe** — roughly doubles in price per level; widens the swathe you cut
+- **Boots**, **Fertilizer** — move speed and regrowth
+- **Farmhands** — up to 6; they work the wheat field and feed whichever workshop is
+  emptiest, falling back to selling when everything is full
+- **Artisans** — every workshop makes more per batch, up to 8 at a time
+- Plus the six buildings and the orchard themselves
+
+Your farm saves to `localStorage` automatically. 📖 opens the journal, ↺ wipes it.
+
+## Notes
+
+- Villagers and order boards only ask for goods you can currently produce, so there
+  are never impossible requests.
+- Everything is drawn procedurally on a 2D canvas in an isometric projection —
+  no image files, no sprite sheets, no fonts to download.
+- Buildings, upgrades, prices, crops and the economy are data-driven: see `STATIONS`,
+  `PADS`, `ITEMS`, `PATCHES`, `STAND` and `BOARD` at the top of the script.
