@@ -1,4 +1,14 @@
 {
+  "routes": [
+    {
+      "route": "/*.md",
+      "statusCode": 404
+    },
+    {
+      "route": "/.gitignore",
+      "statusCode": 404
+    }
+  ],
   "navigationFallback": {
     "rewrite": "/index.html"
   },
