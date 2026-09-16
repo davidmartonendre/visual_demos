@@ -2,10 +2,10 @@
 
 A cosy isometric farm tycoon that runs in one HTML file.
 
-Sweep through a wheat field and the crop falls in an arc around you, stacking into a
-tower over your head. Haul it to the market, spend the coins on upgrades, unlock
-buildings that turn wheat into something worth more, and hire a crew to do the
-cutting for you.
+You've inherited your gran's farm in **Hollowbrook**, a valley that went quiet when
+the old mill stopped turning. Sweep the wheat, restart the mill, put the ovens back
+to work, and the village comes back with it — told in eleven short chapters as you
+rebuild, from Gran's letter to the Harvest Festival.
 
 ## Play it
 
@@ -27,43 +27,56 @@ Works on desktop and phones.
 Harvesting, hauling, buying and selling are all automatic — you only steer. Walk into
 things to make them happen.
 
-## The loop
+## The valley
 
-1. **Sweep the wheat.** Walk through the golden field; your scythe cuts everything in
-   reach and it stacks over your head.
-2. **Sell it.** Two places will take it:
-   - the `SELL` counter at the **Market** buys anything, any amount, at list price;
-   - the **Farm Stand** on the village road pays **70% over market**, but only for
-     what the villagers in the queue are actually asking for.
+Everything starts as a wheat field and a market. Each upgrade pad you pay off opens
+another piece of the chain:
 
-   Bulk goes to the market; the queue is a steady trickle of better money right next
-   to the field. Serving is the one job the farmhands never do for you.
-3. **Stand on a glowing pad.** Your coins drain into it until the upgrade is paid off.
-   Scythe reach, carry capacity, move speed, faster regrowth.
+```
+                     ┌─ WINDMILL ──── flour ─┐
+  wheat field ───────┼─ CHICKEN COOP ─ eggs ─┴─ BAKERY ─── pies
+       │             │
+       │             └─ DAIRY BARN ─── milk ─── CHEESE CELLAR ─ cheese
+       │
+  orchard ─────────── apples ───────── JAM KITCHEN ─────────── jam
+```
 
-   The two main upgrades are paced differently on purpose: the **backpack** is cheap
-   to climb and runs 20 levels from 12 items to **1,012**, while the **scythe** roughly
-   doubles in price each level, so raw cutting power is the expensive one. A late-game
-   backpack holds most of a full field, which turns hauling from a constant chore into
-   one big trip.
-4. **Unlock the Chicken Coop.** Wheat goes in the `FEED` tray, eggs come out of the
-   `TAKE` tray. Eggs sell for ~4× wheat.
-5. **Hire farmhands.** They harvest and haul on their own, feeding whichever building
-   is emptiest. They never sit idle; when both buildings are full they sell at the
-   market instead. Moving eggs to the bakery and serving the queue stay your jobs —
-   that's what keeps you useful once the farm is automated.
-6. **Unlock the Bakery.** Wheat + eggs → pies. Pies sell for ~11× wheat.
-7. **Farm Level 12** is the finish line, though the upgrade pads keep going past it.
+Eight goods, six workshops, and prices that climb steeply the further along a chain
+you go — wheat is $3, a pie is $46, cheese is $52.
 
-Your farm saves to `localStorage` automatically. The ↺ button wipes it.
+## Who buys it
+
+Three buyers, each wanting something different from you:
+
+- **The market** takes anything, any quantity, at list price. The reliable one.
+- **The farm stand** on the village road: villagers queue up with an order bubble and
+  pay **70% over market** — but only for what they're actually asking for.
+- **The town order board** north of the market posts two bundles at a time
+  (*"6 milk + 8 apples"*) and pays **2.3×** for filling one. Orders re-roll as your
+  farm learns to make better things.
+
+Serving people is the one job your farmhands never do for you.
+
+## Upgrades
+
+Thirteen pads along the village street. Stand on one and your coins pour in until
+it's paid off.
+
+- **Backpack** — cheap to climb, 20 levels, 12 → **1,012** items carried
+- **Scythe** — roughly doubles in price per level; widens the swathe you cut
+- **Boots**, **Fertilizer** — move speed and regrowth
+- **Farmhands** — up to 6; they work the wheat field and feed whichever workshop is
+  emptiest, falling back to selling when everything is full
+- **Artisans** — every workshop makes more per batch, up to 8 at a time
+- Plus the six buildings and the orchard themselves
+
+Your farm saves to `localStorage` automatically. 📖 opens the journal, ↺ wipes it.
 
 ## Notes
 
-- Progress persists across reloads; the 🔊 button mutes the synth sound effects.
+- Villagers and order boards only ask for goods you can currently produce, so there
+  are never impossible requests.
 - Everything is drawn procedurally on a 2D canvas in an isometric projection —
   no image files, no sprite sheets, no fonts to download.
-- Roughly 1.8 ms of work per frame, so it idles at 60 fps with lots of headroom.
-- Villagers only ever ask for goods you can currently produce, so there are no
-  impossible orders before the coop and bakery are open.
-- Buildings, upgrades, prices and the stand are data-driven: see `STATIONS`, `PADS`,
-  `ITEMS`, `STAND` and `QUEUE` at the top of the script.
+- Buildings, upgrades, prices, crops and the economy are data-driven: see `STATIONS`,
+  `PADS`, `ITEMS`, `PATCHES`, `STAND` and `BOARD` at the top of the script.
