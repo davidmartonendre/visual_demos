@@ -72,6 +72,45 @@ it's paid off.
 
 Your farm saves to `localStorage` automatically. 📖 opens the journal, ↺ wipes it.
 
+## Hosting it
+
+The whole game is one static file that makes **no network requests at all** — no CDN,
+no fonts, no analytics, no backend. Serving it is just serving `index.html`, so any
+static host will do, on a free tier.
+
+**Azure Static Web Apps.** In the portal, create a Static Web App and point it at this
+repo. When it asks for build details, choose **Custom** and set:
+
+| Setting | Value |
+|---|---|
+| App location | `/` |
+| Api location | *(empty)* |
+| Output location | *(empty)* |
+
+There is nothing to build, so leave the build command empty too. Azure commits its own
+GitHub Actions workflow to the repo and wires up the deployment token; every push to the
+branch then redeploys. `staticwebapp.config.json` in the repo root sets `Cache-Control:
+no-cache` so players always get the current build rather than a stale cached one, and
+rewrites unknown paths to the game.
+
+Prefer the CLI? `npm i -g @azure/static-web-apps-cli`, then:
+
+```
+swa deploy . --app-name <your-app> --env production
+```
+
+**Anything else works too**, since it is one file:
+
+- **GitHub Pages** — Settings → Pages → deploy from branch, root folder. Zero config.
+- **Netlify / Cloudflare Pages** — drag the folder in, or link the repo; no build command.
+- **Your own server** — `cp index.html` into any web root. It also runs straight off
+  disk by double-clicking, though saving works more reliably over `http(s)` than
+  `file://`.
+
+One hosting note: progress is stored in the browser's `localStorage`, which is per
+origin and per device. Players keep their farm on that domain and browser, but it does
+not follow them to another machine.
+
 ## Notes
 
 - Villagers and order boards only ask for goods you can currently produce, so there
