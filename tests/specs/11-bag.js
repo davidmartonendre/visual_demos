@@ -87,9 +87,24 @@ module.exports = {
     t.ok(!walked.open, 'walking away shuts the panel');
     t.eq(walked.bag, null, 'and forgets it was open');
 
-    /* ... and the tray still works the old way once it is shut. */
+    /* ... and the counter still will not sell for you once it is shut. The
+       panel is the only way the player sells: walking over the counter used
+       to empty the whole bag, which is what this is all for. */
     await t.stand(SELL.x, SELL.y, 6);
-    t.eq(await t.get(()=>carried(player())), 0, 'the counter still takes the lot when you just walk on');
+    t.eq(await t.get(()=>player().carry.wheat), 10, 'the counter never sells the bag on its own');
+
+    /* The bulk button is there for when there is nothing to think about. */
+    const lot = await t.get(()=>{
+      G.coins = 0; G.earned = 0;
+      const a = player(); a.carry = emptyBag(); a.carry.wheat = 10; a.carry.milk = 3;
+      openBag('market');
+      el('bag').querySelector('[data-k=__all]').click();
+      const out = { carry: carried(a), coins: Math.round(G.coins) };
+      closeModal();
+      return out;
+    });
+    t.eq(lot.carry, 0, 'SELL EVERYTHING takes the whole bag');
+    t.eq(lot.coins, 10*3 + 3*16, 'at each good\'s own price');
 
     /* The money pile stands on its own square beside the counter. */
     const pad = await t.get(()=>({

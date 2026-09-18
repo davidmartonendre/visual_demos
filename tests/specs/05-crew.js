@@ -65,15 +65,20 @@ module.exports = {
     t.lte(home.dy, 0.4, 'and stays at it');
     t.eq(home.lazy, false, 'the keeper is never lazy -- you paid enough');
 
-    /* With a keeper, the stand pad takes goods in bulk instead of serving
-       one villager at a time. */
+    /* With a keeper, the stand takes goods in bulk -- but only when the
+       player says so. Standing there used to empty the bag into the stall,
+       so walking past cost you the load. */
     await t.run(()=>{ const a = player();
       a.carry = emptyBag(); a.carry.cheese = 40; a.carry.cherrypie = 60;
       a.x = STAND.x + STAND.w/2; a.y = STAND.y + STAND.h/2; });
     await t.tick(12);
-    const stocked = await t.get(()=>({ carry: carried(player()),
-                                       cheese: G.stock.cheese, pie: G.stock.cherrypie }));
-    t.eq(stocked.carry, 0, 'the whole load goes into stock');
+    const idle = await t.get(()=>({ carry: carried(player()), stock: stockTotal() }));
+    t.eq(idle.stock, 0, 'standing at the stand stocks nothing by itself');
+    t.eq(idle.carry, 100, 'and the load stays in the bag');
+
+    const stocked = await t.get(()=>{ standBag(ITEM_ORDER);
+      return { carry: carried(player()), cheese: G.stock.cheese, pie: G.stock.cherrypie }; });
+    t.eq(stocked.carry, 0, 'the whole load goes into stock on one press');
     t.eq(stocked.cheese, 40, 'every cheese is counted');
     t.eq(stocked.pie, 60, 'and every pie');
 
@@ -119,12 +124,12 @@ module.exports = {
     t.gt(goneHome.south, 50, 'they walk back down the road instead');
     t.ok(goneHome.left, 'and are gone by the end of it');
 
-    /* Stock is capped, so a thousand-item backpack cannot overflow it. */
-    await t.run(()=>{ G.stock = emptyBag(); G.stock.wheat = STOCK_CAP - 3;
+    /* Stock is capped, so a big backpack cannot overflow it. */
+    const capped = await t.get(()=>{ G.stock = emptyBag(); G.stock.wheat = STOCK_CAP - 3;
       const a = player(); a.carry = emptyBag(); a.carry.wheat = 500;
-      a.x = STAND.x + STAND.w/2; a.y = STAND.y + STAND.h/2; });
-    await t.tick(12);
-    const capped = await t.get(()=>({ stock: G.stock.wheat, cap: STOCK_CAP, left: player().carry.wheat }));
+      a.x = STAND.x + STAND.w/2; a.y = STAND.y + STAND.h/2;
+      standBag(['wheat']);
+      return { stock: G.stock.wheat, cap: STOCK_CAP, left: a.carry.wheat }; });
     t.eq(capped.stock, capped.cap, 'stock fills exactly to the cap');
     t.gt(capped.left, 0, 'and the rest stays in the bag');
   }

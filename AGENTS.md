@@ -94,27 +94,34 @@ deliberately.
   START_COINS, payouts recomputed from goods), never from the cost table: costs are
   retuned often, and a farm played across a rebalance would fail such a check and be
   thrown away. That bug was written once already and removed.
-- Anything the player unloads somewhere with a cap (a tray, the stall's stock) must
-  reserve what is already in the air. The amount only goes up in the flyer's `onDone`,
-  so a loop that checks the stored figure keeps unloading against a number seconds
-  out of date and sails past the cap. Trays use `s.pend`; the stall uses `stockPend`,
-  which is deliberately not saved — nothing is in flight across a reload.
+- Anything the player unloads somewhere with a cap **over time** must reserve what is
+  already in the air. The amount only goes up in the flyer's `onDone`, so a loop that
+  checks the stored figure keeps unloading against a number seconds out of date and
+  sails past the cap. Trays work that way and use `s.pend`, which is deliberately not
+  saved — nothing is in flight across a reload. The stall's stock does not: the
+  panel moves it in one piece and the flyer is decoration, so there is nothing to
+  reserve against. Bring the counter back if that ever becomes a drip again.
 - Farmhands come in jobs (`a.job`): `field` cuts wheat, `orchard` picks the groves,
   `stall` minds the farm stand and never leaves it. A picker carries fruit, so the
   "only ever wheat" rule above is really "only what `deliveryTarget()` can place" —
   keep the two in step if a new job is added.
 - Farmhand takings go to `G.till` at the market, not to `G.coins`. The player
-  collects by stepping on the SELL tray. Never pay a hand's sale straight into coins:
-  it fires the coin effect continuously for work the player is not doing.
-- With a keeper hired the stand pad changes mode (`serveStand()` → `stockStand()`)
-  and `keeperServe()` works the queue from `G.stock`. Anything that touches the stand
-  has to handle both.
-- Walking onto a tray moves the whole bag. The bag panel (`openBag()`) is the
-  deliberate version of the same thing: it offers itself within five tiles of the
-  counter or the stand, moves one good at a time, and has the farmhands' takings on
-  a button of its own. While it is open the player's `tryStations()` stands down,
-  or the load would be gone before the first button was pressed. Anything new at the
-  counter or the stand needs a row in it.
+  collects by stepping on the money square or from the bag panel. Never pay a hand's
+  sale straight into coins: it fires the coin effect continuously for work the player
+  is not doing.
+- **The player only ever sells through the bag panel** (`openBag()`, `sellBag()`,
+  `standBag()`). The counter and the stand used to move goods on contact — the
+  counter emptied the whole bag priciest-first, and with a keeper hired the stand
+  poured it into the stall — so walking past cost you the load you were carrying
+  somewhere else. Standing there now only raises a hint. `serveStand()` is that
+  hint and nothing more; the panel has a row per good, a whole-bag button and the
+  takings, and anything new at either place needs a row in it. The farmhands still
+  sell on arrival at the market, because they have no panel to press.
+- With a keeper hired `keeperServe()` works the queue from `G.stock`, which the
+  player fills from the panel. Anything that touches the stand has to handle both
+  the keeper and the queue.
+- While the panel is open the player's `tryStations()` stands down, or a tray under
+  their feet would move goods behind the panel's back.
 - A workshop with more than one recipe it can make tosses a coin between them and
   holds the choice until the batch is out. Taking them in order meant the cherry
   version always won and plain pies were never made again once the grove was
