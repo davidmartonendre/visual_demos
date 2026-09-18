@@ -38,18 +38,20 @@ module.exports = {
     t.eq(Object.keys(jobs.picked).filter(k=>k!=='apple' && k!=='cherry').length, 0,
          'a picker only carries fruit');
 
-    /* Fruit has somewhere to go: the jam kitchen takes both kinds, and a
-       picker must never be left holding something it cannot deliver. */
+    /* Fruit has somewhere to go: the jam kitchen takes both kinds and the
+       bakery takes apples, and a picker must never be left holding something
+       it cannot deliver. */
     await t.run(()=>{ const p = actors[1];
       p.carry = emptyBag(); p.carry.apple = 8; p.state = 'deliver'; p.tray = null;
       p.think = 0; p.stuck = 0; p.lastLoad = -1;
-      const j = station('jam'); j.bin = emptyBag(); j.pend = emptyBag(); j.out = emptyBag(); });
+      for(const id of ['jam','bakery']){ const s = station(id);
+        s.bin = emptyBag(); s.pend = emptyBag(); s.out = emptyBag(); } });
     await t.tick(60);
     // it will be back among the trees with a fresh load by now, so measure
     // what arrived rather than what it happens to be holding
-    const delivered = await t.get(()=>{ const j = station('jam');
-      return j.bin.apple + j.pend.apple + j.out.jam * 3; });
-    t.gte(delivered, 8, 'a picker gets its apples to the jam kitchen');
+    const delivered = await t.get(()=>{ const j = station('jam'), b = station('bakery');
+      return j.bin.apple + j.pend.apple + j.out.jam * 3 + b.bin.apple + b.pend.apple; });
+    t.gte(delivered, 8, 'a picker gets its apples to a kitchen that wants them');
 
     /* The keeper: hired for the stand, and it stays there. */
     await t.run(()=>{ G.up.keeper = 1; G.stock = emptyBag(); G.coins = 0; G.earned = 0;
@@ -93,6 +95,29 @@ module.exports = {
                                      neg: ITEM_ORDER.filter(k=>G.stock[k] < 0) }));
     t.eq(empty.coins, 0, 'an empty stall sells nothing');
     t.eq(empty.neg.length, 0, 'and no stock line goes negative');
+
+    /* A served villager walks home the way they came. Leaving northwards
+       took them straight through the stand and the stall. */
+    const goneHome = await t.get(()=>{
+      for(const c of customers){ c.state='walk'; c.slot=-1; c.n=0; c.x=34.3; c.y=30; }
+      const c = customers[0];
+      c.state='leave'; c.slot=-1; c.x=QUEUE[0].x; c.y=QUEUE[0].y;
+      const path = [];
+      for(let i=0;i<60*30;i++){
+        updateCustomers(1/60);
+        path.push({ x:c.x, y:c.y });
+        if(c.state!=='leave') break;
+      }
+      const through = r => path.some(p => p.x>r.x && p.x<r.x+r.w && p.y>r.y && p.y<r.y+r.h);
+      return { north: Math.min.apply(null, path.map(p=>p.y)),
+               south: Math.max.apply(null, path.map(p=>p.y)),
+               stand: through(STAND), stall: through(STALL), left: c.state !== 'leave' };
+    });
+    t.ok(!goneHome.stand, 'a served villager does not walk through the farm stand');
+    t.ok(!goneHome.stall, 'nor through the stall');
+    t.gte(goneHome.north, await t.get(()=>QUEUE[0].y - 0.5), 'they never carry on past the front of the queue');
+    t.gt(goneHome.south, 50, 'they walk back down the road instead');
+    t.ok(goneHome.left, 'and are gone by the end of it');
 
     /* Stock is capped, so a thousand-item backpack cannot overflow it. */
     await t.run(()=>{ G.stock = emptyBag(); G.stock.wheat = STOCK_CAP - 3;

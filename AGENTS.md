@@ -40,7 +40,11 @@ deliberately.
   building is a `STATIONS` entry plus a `PADS` entry with the same `id`, and
   `buyPad()` unlocks it by name automatically.
 - Anything the player can carry must be in `ITEM_ORDER` and `ITEMS`, have a case in
-  `drawItem()`, and be produced either by a station recipe or a patch. `emptyBag()`
+  `drawItem()`, and be produced either by a station recipe or a patch. That drawing
+  is the good's only picture: `itemIcon()` paints the HUD pills and the bag panel
+  rows from the same code. `ITEMS` had an emoji column beside it once and the two
+  drifted apart — a honey pot stood in for cherry jam, a tub of ice cream for
+  cherry pie. `emptyBag()`
   builds every inventory, so never hand-write `{wheat:0, egg:0}` literals.
 - Never hard-code a list of goods anywhere else either: iterate `ITEM_ORDER` or
   `availableItems()`. Four places were left listing only wheat/egg/pie after the
@@ -56,7 +60,8 @@ deliberately.
   keeps the game from asking for goods the player cannot make.
 - Villagers are real customers, not scenery: they queue at the farm stand and buy
   what their bubble asks for. Anything that gives an NPC a visible want must be
-  serveable.
+  serveable. Once served they step out to `LEAVE_LANE` and walk back down the road
+  they came up; leaving northwards walked them through the stand and the stall.
 - Farmhands only ever carry wheat. They must never pick up from an `out` tray:
   nothing but wheat can be unloaded at the places they walk to, so one stray item
   strands them in `deliver` forever, shuffling between input trays. `deliveryTarget()`
@@ -104,6 +109,23 @@ deliberately.
 - With a keeper hired the stand pad changes mode (`serveStand()` → `stockStand()`)
   and `keeperServe()` works the queue from `G.stock`. Anything that touches the stand
   has to handle both.
+- Walking onto a tray moves the whole bag. The bag panel (`openBag()`) is the
+  deliberate version of the same thing: it offers itself within five tiles of the
+  counter or the stand, moves one good at a time, and has the farmhands' takings on
+  a button of its own. While it is open the player's `tryStations()` stands down,
+  or the load would be gone before the first button was pressed. Anything new at the
+  counter or the stand needs a row in it.
+- A workshop with more than one recipe it can make tosses a coin between them and
+  holds the choice until the batch is out. Taking them in order meant the cherry
+  version always won and plain pies were never made again once the grove was
+  planted. A plain pie needs an apple as well as an egg, so the pickers' fruit
+  feeds the oven and not only the jam pan. A batch takes twice as long as it did
+  before artisans existed: `1 + crew` items at the old times filled the out trays
+  faster than anyone could carry them away.
+- Nothing that matters is drawn on a square the player stands on: their own body
+  covers it. The takings pile has its own square beside the counter (`TILL_PAD`),
+  and is drawn with the depth-sorted entities rather than with the trays, which go
+  down before the buildings.
 - Every level has a rank title from `RANKS`; `rankAt()` resolves any level, including
   ones above the top of the ladder. A banner fires only from `checkLevel()`, on a real
   level-up that lands exactly on a rank. Loading a save recomputes the level from

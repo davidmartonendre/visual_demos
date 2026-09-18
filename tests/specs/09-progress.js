@@ -60,6 +60,13 @@ module.exports = {
     t.eq(hired.lazyRolled, 1, 'and each hand has its trait rolled once');
     t.eq(hired.pickerRolled, 1, 'and so does each picker');
 
+    /* The groves were doubled when the oven started asking for apples: the
+       fruit now feeds pies as well as jam, so there has to be enough of it. */
+    const groves = await t.get(()=>PATCHES.filter(p=>p.kind==='tree')
+      .map(p=>({ id:p.id, n:p.nodes.length })));
+    t.eq(groves.length, 2, 'there are two groves');
+    for(const g of groves) t.gte(g.n, 20, 'the ' + g.id + ' has twenty trees to pick');
+
     /* availableItems() must only ever name things the player can actually
        get hold of, and must grow as the farm does. */
     await t.reset();

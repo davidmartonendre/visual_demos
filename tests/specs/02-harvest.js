@@ -63,18 +63,47 @@ module.exports = {
     t.eq(mixed.carry, 0, 'a mixed load sells out completely');
     t.eq(mixed.neg.length, 0, 'selling cheese never drives wheat negative');
 
-    /* A late-game backpack holds over a thousand items. Parcels are sized
-       from a constant, never from what is left, or the tail of the stack
-       decays geometrically and the last items never arrive. */
+    /* A late-game backpack holds a few hundred items -- it is capped at 400,
+       so the pads past the cap are still worth buying for the ones below it.
+       Parcels are sized from a constant, never from what is left, or the tail
+       of the stack decays geometrically and the last items never arrive. */
     await t.run(()=>{ G.up.bag = 20; G.coins = 0; G.earned = 0;
                       const a = player(); a.carry = emptyBag(); a.carry.wheat = capacity(); });
     const big = await t.get(()=>capacity());
     await t.stand(SELL.x, SELL.y);
     await t.tick(60);
     const drained = await t.get(()=>({ carry: carried(player()), coins: Math.round(G.coins) }));
-    t.gt(big, 1000, 'a maxed backpack really does hold over a thousand');
+    t.eq(big, 400, 'a maxed backpack holds four hundred');
     t.eq(drained.carry, 0, 'a full late-game bag drains completely');
     t.eq(drained.coins, big * 3, 'and pays for every last item');
+
+    /* Fruit comes off a branch at half the speed wheat comes off the field,
+       and stays half however sharp the scythe is -- the groves are meant to
+       be the pickers' work, not yours. */
+    const fruit = await t.get(()=>{
+      G.up.orchard = 1; G.up.scythe = 6; G.up.bag = 20;
+      // a harvest is worth whole trees or whole tiles, so time the swing
+      // rather than counting what comes off it
+      const a = player(), swing = (x,y)=>{
+        a.x = x; a.y = y; a.cut = 0; a.carry = emptyBag();
+        let i = 0; while(i < 900 && carried(a) === 0){ tryHarvest(a, 1/60); i++; }
+        return i;
+      };
+      const g = PATCHES.find(p=>p.id==='orchard').rect;
+      return { tree: swing(g.x + g.w/2, g.y + g.h/2), wheat: swing(22, 12) };
+    });
+    t.gt(fruit.wheat, 0, 'a sharp scythe still cuts wheat');
+    t.near(fruit.tree, fruit.wheat*2, 1.5,
+           'and the player picks fruit at half that rate, sharp scythe or not');
+
+    /* Hired hands are capped at 80 whatever backpack the player is wearing. */
+    const hands = await t.get(()=>{
+      G.up.bag = 20;
+      const h = newActor(0,0,true,false,'field');
+      return { hand: actorCap(h), player: actorCap(player()) };
+    });
+    t.eq(hands.hand, 80, 'a farmhand carries at most eighty');
+    t.eq(hands.player, 400, 'while the player carries four hundred');
 
     /* Standing on the counter with nothing must be harmless. */
     await t.run(()=>{ G.coins = 100; G.till = 0; player().carry = emptyBag(); });

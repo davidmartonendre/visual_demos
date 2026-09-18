@@ -28,6 +28,9 @@
   .pill i{position:absolute;left:-5px;top:50%;transform:translateY(-50%);
     width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:21px;font-style:normal;
     background:linear-gradient(#f4f0e4,#cfc7b2);box-shadow:0 3px 5px rgba(0,0,0,.4),inset 0 2px 0 #fff}
+  /* a drop shadow instead of an outline: the pale goods (flour, milk, egg)
+     are nearly the colour of the disc they sit on */
+  .pill i img{width:31px;height:31px;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
 
   /* ---------- bottom bar ---------- */
   #bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;pointer-events:none}
@@ -36,10 +39,31 @@
   #btmrow{display:flex;align-items:center;gap:8px;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
   .round{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
     background:rgba(20,14,6,.6);color:#fff;font-size:19px;display:grid;place-items:center}
-  #lvltxt{pointer-events:auto;cursor:pointer;flex:1;min-width:0;font-size:13.5px;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.9);letter-spacing:.04em;
-    text-align:right;text-shadow:0 1px 2px rgba(0,0,0,.6)}
-  #lvltxt:active{opacity:.6}
+  /* The rank sits on its own line: on a phone it shared the row with five
+     buttons and every long title was cut off by the ellipsis. */
+  #lvlrow{display:flex;justify-content:center;padding:8px 12px 0}
+  #lvltxt{pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:9px;
+    max-width:min(560px,94vw);padding:6px 14px 8px;border-radius:15px;
+    background:linear-gradient(rgba(44,32,16,.82),rgba(20,14,6,.88));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 3px 7px rgba(0,0,0,.42)}
+  #lvltxt:active{transform:translateY(2px)}
+  #lvlnum{flex:none;font-size:14px;font-weight:900;letter-spacing:.05em;color:#40300f;
+    background:linear-gradient(#ffd868,#efa72a);border-radius:9px;padding:3px 9px 4px}
+  #lvlname{font-size:16.5px;font-weight:900;letter-spacing:.01em;color:#ffe9b8;line-height:1.2;
+    text-shadow:0 2px 3px rgba(0,0,0,.6);overflow-wrap:anywhere}
+
+  /* ---------- bag panel ---------- */
+  #b-bag{position:absolute;left:50%;transform:translateX(-50%);z-index:6;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 128px);display:none;
+    border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:16px;color:#4a3418;
+    padding:11px 20px 13px;border-radius:16px;letter-spacing:.02em;
+    background:linear-gradient(#ffe8a8,#f3c95f);box-shadow:0 5px 0 #c9942a,0 9px 16px rgba(0,0,0,.42)}
+  #b-bag.on{display:block}
+  #b-bag:active{transform:translateX(-50%) translateY(4px);box-shadow:0 1px 0 #c9942a}
+  #bag{text-align:left;max-height:56vh;overflow-y:auto}
+  #bag .cq{font-size:12.5px;font-weight:800;color:#8a7b63}
+  .crow.till{border-bottom:none;margin-top:4px;padding-top:11px;border-top:2px solid rgba(122,79,29,.25)}
+  #bagmsg{margin-top:8px;font-size:13px;font-weight:800;color:#b23b3b;min-height:16px}
 
   /* ---------- tutorial / toast ---------- */
   #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:78px;z-index:6;
@@ -91,6 +115,7 @@
   .crow{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(122,79,29,.16)}
   .crow.party{border-bottom:none;margin-top:4px;padding-top:11px;border-top:2px solid rgba(122,79,29,.25)}
   .crow .ci{font-size:22px;width:26px;text-align:center}
+  .crow .ci img{width:26px;height:26px;display:block;margin:0 auto;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
   .crow .cn{flex:1;font-size:14.5px;font-weight:800}
   .cb{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:12.5px;color:#5c4526;
     padding:7px 11px 9px;border-radius:10px;min-width:82px;
@@ -173,15 +198,19 @@
 
   <div id="hint" class="pop"></div>
 
+  <button id="b-bag">&#127890; INVENTORY</button>
+
   <div id="bottom">
     <div id="levelbar"><div id="levelfill"></div></div>
+    <div id="lvlrow">
+      <div id="lvltxt" class="pop"><b id="lvlnum">LVL 1</b><span id="lvlname">Field Hand</span></div>
+    </div>
     <div id="btmrow">
       <button class="round" id="b-sound">&#128266;</button>
       <button class="round" id="b-journal" title="Journal">&#128214;</button>
       <button class="round" id="b-shop" title="Shop">&#128717;</button>
       <button class="round" id="b-save" title="Save file">&#128190;</button>
       <button class="round" id="b-reset" title="Restart farm">&#8635;</button>
-      <div id="lvltxt" class="pop">FARM LEVEL 1</div>
     </div>
   </div>
 
@@ -202,7 +231,9 @@
    ========================================================================= */
 
 const cvs = document.getElementById('game');
-const ctx = cvs.getContext('2d');
+/* Not const: itemIcon() borrows the drawing code for a moment to paint the
+   HUD icons into a canvas of their own. */
+let ctx = cvs.getContext('2d');
 const TW = 74, TH = 37;                 // iso tile width / height in px
 let CW = 0, CH = 0, ZOOM = 1;
 
@@ -226,18 +257,22 @@ const MAP = { w:40, h:56 };
      wheat -> egg / milk -> cheese
      apple -> jam                                                          */
 const ITEM_ORDER = ['wheat','apple','cherry','flour','egg','milk','jam','cherryjam','cheese','pie','cherrypie'];
+/* A good is its `label` and its case in drawItem(), and that drawing is what
+   the HUD and the bag panel show as well. There was an emoji column here too
+   and it drifted: a honey pot stood in for cherry jam and a tub of ice cream
+   for cherry pie, so the pills said one thing and the trays another. */
 const ITEMS = {
-  wheat: { label:'WHEAT',  price:3,  pill:'\u{1F33E}' },
-  apple: { label:'APPLES', price:7,  pill:'\u{1F34E}' },
-  flour: { label:'FLOUR',  price:9,  pill:'\u{1F35A}' },
-  egg:   { label:'EGGS',   price:11, pill:'\u{1F95A}' },
-  milk:  { label:'MILK',   price:16, pill:'\u{1F95B}' },
-  jam:   { label:'APPLE JAM', price:34, pill:'\u{1F96B}' },
-  cherry:    { label:'CHERRIES',   price:14,  pill:'\u{1F352}' },
-  cherryjam: { label:'BLACK JAM',  price:95,  pill:'\u{1F36F}' },
-  cherrypie: { label:'CHERRY PIE', price:130, pill:'\u{1F9C1}' },
-  cheese:{ label:'CHEESE', price:52, pill:'\u{1F9C0}' },
-  pie:   { label:'PIES',   price:46, pill:'\u{1F967}' },
+  wheat: { label:'WHEAT',  price:3  },
+  apple: { label:'APPLES', price:7  },
+  flour: { label:'FLOUR',  price:9  },
+  egg:   { label:'EGGS',   price:11 },
+  milk:  { label:'MILK',   price:16 },
+  jam:   { label:'APPLE JAM', price:34 },
+  cherry:    { label:'CHERRIES',    price:14  },
+  cherryjam: { label:'CHERRY JAM',  price:95  },
+  cherrypie: { label:'CHERRY PIE',  price:130 },
+  cheese:{ label:'CHEESE', price:52 },
+  pie:   { label:'PIES',   price:46 },
 };
 const emptyBag = ()=>{ const o={}; for(const k of ITEM_ORDER) o[k]=0; return o; };
 
@@ -245,14 +280,21 @@ const emptyBag = ()=>{ const o={}; for(const k of ITEM_ORDER) o[k]=0; return o; 
 const PATCHES = [
   { id:'field',   item:'wheat', kind:'crop', cell:1.0, regrow:7,  yieldMul:1, gate:null,
     rect:{ x:19, y:4,  w:13, h:24 } },
-  { id:'orchard', item:'apple',  kind:'tree', cell:2.6, regrow:14, yieldMul:3, gate:'orchard',
-    fruit:'#d8402f', leaf:'#2f7a34', rect:{ x:19, y:31, w:6.5, h:13 } },
-  { id:'cherry',  item:'cherry', kind:'tree', cell:2.6, regrow:17, yieldMul:3, gate:'cherry',
-    fruit:'#8e1533', leaf:'#276b2c', rect:{ x:25.8, y:31, w:6.2, h:13 } },
+  /* The groves run the length of the valley: twenty trees apiece, twice what
+     they held. `pickMul` is what the player's own hands manage in them --
+     fruit comes off a branch at half the speed the scythe takes wheat, and
+     it stays half however sharp the scythe gets. */
+  { id:'orchard', item:'apple',  kind:'tree', cell:2.4, regrow:14, yieldMul:3, gate:'orchard',
+    pickMul:0.5, fruit:'#d8402f', leaf:'#2f7a34', rect:{ x:19.6, y:30, w:4.9, h:24 } },
+  { id:'cherry',  item:'cherry', kind:'tree', cell:2.4, regrow:17, yieldMul:3, gate:'cherry',
+    pickMul:0.5, fruit:'#8e1533', leaf:'#276b2c', rect:{ x:25.2, y:30, w:4.9, h:24 } },
 ];
 
 /* Stations sit on the far (west) side so nothing ever hides the player.
-   Their trays are on the near (east) face, in front of the walls.        */
+   Their trays are on the near (east) face, in front of the walls.
+   A batch takes twice as long as it once did: with artisans hired a workshop
+   turns out `1 + crew` of a thing at a time, and at the old times the trays
+   filled faster than anyone could carry them away.                       */
 const STATIONS = [
   { id:'market', name:'MARKET', kind:'sell', unlocked:true, motif:'flag',
     b:{x:3,y:3,w:7,h:5}, roof:'#c0392b',
@@ -260,52 +302,61 @@ const STATIONS = [
 
   { id:'windmill', name:'WINDMILL', kind:'make', unlocked:false, motif:'sails',
     shape:'mill', b:{x:5.9,y:11.2,w:3.8,h:3.8}, roof:'#5b8ec4',
-    recipes:[ { in:{wheat:2}, out:'flour', time:1.2 } ],
+    recipes:[ { in:{wheat:2}, out:'flour', time:2.4 } ],
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:10.9, w:2.0, h:1.9},
             {mode:'out', item:'flour', x:10.2, y:13.1, w:2.0, h:1.9} ] },
 
   { id:'coop', name:'CHICKEN COOP', kind:'make', unlocked:false, motif:'perch',
     shape:'shed', b:{x:5.8,y:17.1,w:4,h:3.4}, roof:'#e08a2e',
-    recipes:[ { in:{wheat:2}, out:'egg', time:1.5 } ],
+    recipes:[ { in:{wheat:2}, out:'egg', time:3.0 } ],
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:16.9, w:2.0, h:1.9},
             {mode:'out', item:'egg',   x:10.2, y:19.1, w:2.0, h:1.9} ] },
 
   { id:'dairy', name:'DAIRY BARN', kind:'make', unlocked:false, motif:'silo',
     b:{x:4,y:23,w:6,h:4}, roof:'#b0453a',
-    recipes:[ { in:{wheat:3}, out:'milk', time:1.8 } ],
+    recipes:[ { in:{wheat:3}, out:'milk', time:3.6 } ],
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:22.9, w:2.0, h:1.9},
             {mode:'out', item:'milk',  x:10.2, y:25.1, w:2.0, h:1.9} ] },
 
   { id:'cheese', name:'CHEESE CELLAR', kind:'make', unlocked:false, motif:'vent',
     b:{x:4,y:29,w:6,h:4}, roof:'#d9a441',
-    recipes:[ { in:{milk:2}, out:'cheese', time:2.4 } ],
+    recipes:[ { in:{milk:2}, out:'cheese', time:4.8 } ],
     trays:[ {mode:'in',  item:'milk',   x:10.2, y:28.9, w:2.0, h:1.9},
             {mode:'out', item:'cheese', x:10.2, y:31.1, w:2.0, h:1.9} ] },
 
+  /* A plain pie takes an apple as well as an egg, so the pickers' fruit feeds
+     the oven instead of piling up as jam. Four in-trays, hence the long row. */
   { id:'bakery', name:'BAKERY', kind:'make', unlocked:false, motif:'chimney',
     b:{x:3,y:35,w:7,h:5}, roof:'#8e5bb5',
-    recipes:[ { in:{flour:1, cherry:2}, out:'cherrypie', time:3.0 },
-              { in:{flour:1, egg:1},     out:'pie',       time:2.6 } ],
+    recipes:[ { in:{flour:1, cherry:2},        out:'cherrypie', time:6.0 },
+              { in:{flour:1, egg:1, apple:1},  out:'pie',       time:5.2 } ],
     trays:[ {mode:'in',  item:'flour',  x:10.2, y:34.9, w:2.0, h:1.9},
             {mode:'in',  item:'egg',    x:10.2, y:37.1, w:2.0, h:1.9},
-            {mode:'in',  item:'cherry', x:10.2, y:39.3, w:2.0, h:1.9},
-            {mode:'out', item:'pie',    x:10.2, y:41.5, w:2.0, h:1.9} ] },
+            {mode:'in',  item:'apple',  x:10.2, y:39.3, w:2.0, h:1.9},
+            {mode:'in',  item:'cherry', x:10.2, y:41.5, w:2.0, h:1.9},
+            {mode:'out', item:'pie',    x:10.2, y:43.7, w:2.0, h:1.9} ] },
 
   { id:'jam', name:'JAM KITCHEN', kind:'make', unlocked:false, motif:'chimney',
-    b:{x:4,y:46,w:6,h:4}, roof:'#c2447a',
-    recipes:[ { in:{cherry:3}, out:'cherryjam', time:2.6 },
-              { in:{apple:3},  out:'jam',       time:2.2 } ],
-    trays:[ {mode:'in',  item:'apple',  x:10.2, y:45.9, w:2.0, h:1.9},
-            {mode:'in',  item:'cherry', x:10.2, y:48.1, w:2.0, h:1.9},
-            {mode:'out', item:'jam',    x:10.2, y:50.3, w:2.0, h:1.9} ] },
+    b:{x:4,y:48,w:6,h:4}, roof:'#c2447a',
+    recipes:[ { in:{cherry:3}, out:'cherryjam', time:5.2 },
+              { in:{apple:3},  out:'jam',       time:4.4 } ],
+    trays:[ {mode:'in',  item:'apple',  x:10.2, y:47.9, w:2.0, h:1.9},
+            {mode:'in',  item:'cherry', x:10.2, y:50.1, w:2.0, h:1.9},
+            {mode:'out', item:'jam',    x:10.2, y:52.3, w:2.0, h:1.9} ] },
 ];
 const TRAY_CAP = 50;
+
+/* Where the farmhands' takings pile up. It used to be drawn on the SELL tray
+   itself, which is where the player stands to collect it -- so their own body
+   covered the money and it looked as though there was none. */
+const TILL_PAD = { x:12.5, y:6.6, w:1.5, h:1.8 };
 
 /* The roadside farm stand. Villagers queue here and pay over the odds for
    whatever they happen to want; the market takes anything at list price. */
 const STALL = { x:33.2, y:5.4, w:2.4, h:2.0 };
 const STAND = { x:33.0, y:7.8, w:2.6, h:2.9 };
 const QUEUE = [ {x:34.3,y:11.4}, {x:34.3,y:13.1}, {x:34.3,y:14.8} ];
+const LEAVE_LANE = 35.7;        // the far side of the road, for walking home
 const STAND_BONUS = 1.7;
 const STOCK_CAP = 999;          // per good, once a keeper minds the stall
 const standPrice = k => Math.round(ITEMS[k].price * STAND_BONUS);
@@ -345,7 +396,7 @@ const PADS = [
   { id:'hand',   name:'HIRE FARMHAND',icon:'\u{1F468}', x:14.6, y:25.4, cost:360,  mul:2.0,  max:6,
     desc:l=>l+' hired (some are lazy)',      show:()=>G.up.coop>0 },
   { id:'bakery', name:'BAKERY',       icon:'\u{1F967}', x:17.4, y:28.8, cost:1000, mul:1,    max:1,
-    desc:()=>'Flour + eggs \u2192 pies',      show:()=>G.up.coop>0 && G.earned>=900 },
+    desc:()=>'Flour + eggs + apples \u2192 pies', show:()=>G.up.coop>0 && G.earned>=900 },
   { id:'crew',   name:'HIRE ARTISANS',icon:'\u{1F9D1}', x:14.6, y:32.2, cost:900, mul:1.85, max:8,
     desc:l=>'Workshops make '+(1+l)+' per batch', show:()=>G.up.windmill>0 && G.earned>=800 },
   { id:'dairy',  name:'DAIRY BARN',   icon:'\u{1F404}', x:17.4, y:35.6, cost:1800, mul:1,    max:1,
@@ -353,7 +404,7 @@ const PADS = [
   { id:'cheese', name:'CHEESE CELLAR',icon:'\u{1F9C0}', x:14.6, y:39.0, cost:3200, mul:1,    max:1,
     desc:()=>'Milk \u2192 cheese',            show:()=>G.up.dairy>0 },
   { id:'orchard',name:'PLANT ORCHARD',icon:'\u{1F34E}', x:17.4, y:42.4, cost:4200, mul:1,    max:1,
-    desc:()=>'An apple grove to pick',       show:()=>G.up.dairy>0 },
+    desc:()=>'Apples \u2014 for jam and for pies', show:()=>G.up.bakery>0 },
   { id:'jam',    name:'JAM KITCHEN',  icon:'\u{1F353}', x:14.6, y:45.8, cost:6500, mul:1,    max:1,
     desc:()=>'Apples \u2192 jam',             show:()=>G.up.orchard>0 },
   { id:'cherry', name:'CHERRY GROVE',  icon:'\u{1F352}', x:17.4, y:49.2, cost:25000, mul:1,   max:1,
@@ -369,7 +420,7 @@ const UPGRADE_IDS = PADS.map(p=>p.id);
 let G, actors, flyers, pops, puffs, coinFx, customers;
 
 function padCost(p){ const l=G.up[p.id]||0; return Math.round(p.cost*Math.pow(p.mul,l)); }
-function capAt(l){ return 12 + 10*l + 2*l*l; }   // 12, 24, 40, 60, 84 ... 1012
+function capAt(l){ return Math.min(400, Math.round(12 + 14*l + 0.3*l*l)); }  // 12, 26, 41 ... 400
 function capacity(){ return capAt(G.up.bag); }
 function harvestRate(){ return 2.6 * (1 + 0.35*G.up.scythe); }
 function yieldPer(){ return 1 + Math.floor(G.up.scythe/2); }
@@ -404,7 +455,7 @@ function resetGame(){
 
   for(const s of STATIONS){
     s.unlocked = (s.id==='market');
-    s.timer = 0;
+    s.timer = 0; s.job = null;
     s.bin = emptyBag();
     s.pend = emptyBag();
     s.out = emptyBag();
@@ -462,8 +513,12 @@ function updateCustomers(dt){
   for(const c of customers){
     let tx=c.x, ty=c.y, speed=1.7;
     if(c.state==='leave'){
-      tx = c.x; ty = 1.0; speed = 2.4;
-      if(c.y < 2.2){ resetCustomer(c); continue; }
+      /* Home is back down the road they came up. Leaving northwards walked
+         them straight through the stand and the stall. */
+      speed = 2.2;
+      tx = LEAVE_LANE;
+      ty = Math.abs(c.x - LEAVE_LANE) > 0.3 && c.y < QUEUE[0].y + 3 ? c.y : MAP.h + 0.5;
+      if(c.y > MAP.h - 1.0){ resetCustomer(c); continue; }
     } else if(c.slot>=0){
       tx = QUEUE[c.slot].x; ty = QUEUE[c.slot].y;
     } else {
@@ -917,7 +972,9 @@ function patchAt(x,y){
   return null;
 }
 
-function actorCap(a){ return a.hand ? Math.max(12, Math.round(capacity()*0.35)) : capacity(); }
+/* A hired pair of hands carries a share of yours, and never more than 80:
+   past that a single hand empties a grove between naps. */
+function actorCap(a){ return a.hand ? clamp(Math.round(capacity()*0.35), 12, 80) : capacity(); }
 function reach(){ return 0.75 + 0.15*G.up.scythe; }
 
 function nodesAround(p, x, y, R){
@@ -942,7 +999,7 @@ function tryHarvest(a, dt){
     if(!a.hand) hint('bagfull', 'BAG FULL \u2014 go sell it!');
     a.cut = 0; return false;
   }
-  a.cut += dt * harvestRate() * (a.hand?0.45:1);
+  a.cut += dt * harvestRate() * (a.hand ? 0.45 : (p.pickMul || 1));
   if(a.cut < 1) return false;
   a.cut = 0;
 
@@ -975,9 +1032,23 @@ function itemFlyer(item, from, to, onDone){
                 h:rnd(1.6,2.4), spin:rnd(-6,6), onDone });
 }
 
+/* The takings, wherever the player collects them from. */
+function collectTill(){
+  if(G.till < 1) return 0;
+  const take = Math.round(G.till); G.till = 0;
+  G.coins += take; G.earned += take;
+  sfx.buy(); checkLevel(); save();
+  const a = player();
+  for(let i=0;i<10;i++) setTimeout(()=>spawnCoinFx(), i*45);
+  pops.push({x:a.x, y:a.y, z:1.6, t:0, txt:'+'+fmt(take), col:'#ffe066', big:true});
+  return take;
+}
+
 /* interaction with station trays: unload / pick up / sell */
 function tryStations(a, dt){
   a.ioT = (a.ioT||0) + dt;
+  if(!a.hand && bagOpen) return;                  // the panel is doing the carrying
+  if(!a.hand && inRect(a, TILL_PAD)) collectTill();
   if(!a.hand && serveStand(a, dt)) return;
   if(!a.hand && serveBoard(a, dt)) return;
   for(const s of STATIONS){
@@ -986,13 +1057,7 @@ function tryStations(a, dt){
       if(!inRect(a, tr)) continue;
 
       if(tr.mode==='sell'){
-        if(!a.hand && G.till > 0){
-          const take = Math.round(G.till); G.till = 0;
-          G.coins += take; G.earned += take;
-          sfx.buy(); checkLevel();
-          for(let i=0;i<10;i++) setTimeout(()=>spawnCoinFx(), i*45);
-          pops.push({x:a.x, y:a.y, z:1.6, t:0, txt:'+'+fmt(take), col:'#ffe066', big:true});
-        }
+        if(!a.hand) collectTill();
         if(carried(a)<=0) continue;
         const step0 = flowStep(actorCap(a));   // constant, so the stack always drains
         while(a.ioT >= IO_INTERVAL && carried(a)>0){
@@ -1071,13 +1136,19 @@ function outTotal(s){ let n=0; for(const k of ITEM_ORDER) n += s.out[k]; return 
 function produce(dt){
   for(const s of STATIONS){
     if(!s.unlocked || s.kind!=='make') continue;
-    // recipes are listed best-first, so a workshop uses the fancy fruit when it has it
-    const r = s.recipes.find(r => Object.keys(r.in).every(k => s.bin[k] >= r.in[k]));
+    /* A workshop with two recipes tosses a coin between the ones it can make.
+       Taking them in order meant the cherry version always won, so the plain
+       one was never made at all once the grove was planted. The choice is
+       held until the batch comes out, or the timer would count against a
+       recipe that keeps changing under it. */
+    const ready = s.recipes.filter(r => Object.keys(r.in).every(k => s.bin[k] >= r.in[k]));
+    if(!ready.includes(s.job)) s.job = ready.length ? ready[Math.floor(rnd(0,ready.length))] : null;
+    const r = s.job;
     const room = TRAY_CAP - outTotal(s);
     if(r && room > 0){
       s.timer += dt;
       if(s.timer >= r.time){
-        s.timer = 0;
+        s.timer = 0; s.job = null;
         let batch = 1 + G.up.crew;
         for(const k in r.in) batch = Math.min(batch, Math.floor(s.bin[k] / r.in[k]));
         batch = Math.max(1, Math.min(batch, room));
@@ -1470,6 +1541,18 @@ const RANKS = [
   { lv:155, name:'Grand Farmer Extraordinaire',line:'There is no larger hat. We checked.' },
   { lv:190, name:'Ascended Agriculturalist',   line:'You harvest things that were not planted.' },
   { lv:240, name:'Farmer Eternal, Tiller of Worlds', line:'Somewhere, a distant moon grows wheat in your honour.' },
+  { lv:280, name:'Warden of the Long Barn',    line:'The barn runs from the gate to the brook.' },
+  { lv:325, name:'Keeper of the Turning Year', line:'Spring waits on your word now.' },
+  { lv:375, name:'Lord of the Low Water',      line:'You moved the brook. It did not seem to mind.' },
+  { lv:430, name:'Sower of the Far Hills',     line:'Wheat where there was nothing but gorse.' },
+  { lv:490, name:'The Hand That Feeds the North', line:'Three counties eat because you get up early.' },
+  { lv:555, name:'Master of the Fat Years',    line:'Nobody here can remember a thin one.' },
+  { lv:625, name:'Steward of Ten Thousand Furrows', line:'You gave up counting at nine thousand.' },
+  { lv:700, name:'Voice of the Whole Valley',  line:'They vote the way you plough.' },
+  { lv:780, name:'Shepherd of the Old Ways',   line:'Nothing is done here that Gran would not know.' },
+  { lv:865, name:'The Name in Every Larder',   line:'Your mark is on a jar in every kitchen.' },
+  { lv:955, name:'Keeper of the Last Field',   line:'One patch is still rough. You are saving it.' },
+  { lv:1000,name:'Gran',                       line:'The valley calls you what it called her. That is the whole of it.' },
 ];
 function rankAt(lv){
   let r = RANKS[0];
@@ -1491,7 +1574,10 @@ function showBanner(title, line, kicker){
     col:['#ffe066','#ff9de0','#6fd0ff','#8ef07a','#ffb347'][i%5], r:rnd(2.5,4.5) });
 }
 
-function levelReq(n){ return Math.round(60*Math.pow(n,1.75)); }
+/* Lifetime earnings for a level. The square is what makes each level cost
+   more than the last, and the tail term makes the gap itself grow, so the
+   late ranks are a season's work rather than an afternoon's. */
+function levelReq(n){ return Math.round(85*Math.pow(n,2)*(1 + n/400)); }
 function checkLevel(){
   while(G.earned >= levelReq(G.level)){
     G.level++; sfx.levelup(); shake=Math.max(shake,7);
@@ -2121,6 +2207,23 @@ function drawItem(kind, x, y, s){
   }
 }
 
+/* The same picture in the HUD as in the world. Drawn once per good, big, and
+   shown small, so it stays sharp on a phone. */
+const ICONS = {};
+function itemIcon(k){
+  if(ICONS[k]) return ICONS[k];
+  const R = 72, off = document.createElement('canvas');
+  off.width = off.height = R;
+  const real = ctx;
+  ctx = off.getContext('2d');
+  try { ctx.translate(R/2, R/2 + 4); drawItem(k, 0, 0, 2.5); }
+  finally { ctx = real; }
+  return ICONS[k] = off.toDataURL();
+}
+function iconTag(k, cls){
+  return '<img src="'+itemIcon(k)+'" alt="'+ITEMS[k].label+'"'+(cls?' class="'+cls+'"':'')+'>';
+}
+
 /* ------------------------------------------------------------ trays */
 function drawTray(s, tr){
   const col = tr.mode==='in' ? '#3f8ad8' : tr.mode==='out' ? '#3fb85e' : '#e0a400';
@@ -2133,19 +2236,6 @@ function drawTray(s, tr){
     ctx.font='900 26px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#8a5a00'; ctx.lineWidth=5;
     ctx.strokeText('SELL', p.sx, p.sy-6); ctx.fillText('SELL', p.sx, p.sy-6);
-    if(G.till > 0){                                // takings waiting to be collected
-      const bills = Math.min(14, 1 + Math.floor(Math.log10(1 + G.till) * 3));
-      for(let i=0;i<bills;i++){
-        const bx = p.sx - 34 + (i%3)*13, by = p.sy - 16 - Math.floor(i/3)*5;
-        ctx.fillStyle='#4caf50'; ctx.strokeStyle='#2e7d32'; ctx.lineWidth=1.5;
-        roundRect(bx-9, by-5, 18, 10, 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle='#a5e8a8'; ctx.beginPath(); ctx.arc(bx, by, 2.4, 0, 6.29); ctx.fill();
-      }
-      ctx.font='900 16px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillStyle='#eaffe6'; ctx.strokeStyle='#1f5a22'; ctx.lineWidth=4;
-      const tt = '$'+fmt(G.till);
-      ctx.strokeText(tt, p.sx-21, p.sy-40); ctx.fillText(tt, p.sx-21, p.sy-40);
-    }
     const all = availableItems();
     const shown = all.slice(0, 4);                 // the counter is only so wide
     ctx.font='900 13px system-ui,sans-serif'; ctx.fillStyle='#fff'; ctx.lineWidth=4;
@@ -2169,6 +2259,36 @@ function drawTray(s, tr){
   ctx.fillStyle='#fff'; ctx.strokeStyle='#00000066'; ctx.lineWidth=4;
   const lbl = (tr.mode==='in'?'FEED ':'TAKE ') + n;
   ctx.strokeText(lbl, p.sx, p.sy+24); ctx.fillText(lbl, p.sx, p.sy+24);
+}
+
+/* The takings, on their own square beside the counter. Drawn with the
+   entities rather than with the trays, because the trays go down before the
+   buildings and the market roof would swallow the pile. */
+function drawTillPad(){
+  if(G.till < 1) return;
+  const pulse = 0.5 + 0.5*Math.sin(G.t*3);
+  quad(TILL_PAD.x, TILL_PAD.y, TILL_PAD.w, TILL_PAD.h, '#000', .18);
+  quad(TILL_PAD.x+.08, TILL_PAD.y+.08, TILL_PAD.w-.16, TILL_PAD.h-.16, '#2f9e4a', .42+0.18*pulse);
+}
+function drawTillPile(){
+  if(G.till < 1) return;
+  const c = rectCenter(TILL_PAD), p = iso(c.x, c.y);
+  const bills = Math.min(18, 2 + Math.floor(Math.log10(1 + G.till) * 3));
+  for(let i=0;i<bills;i++){
+    const bx = p.sx - 15 + (i%3)*15, by = p.sy + 3 - Math.floor(i/3)*6 - (i%3)*2;
+    ctx.fillStyle='#4caf50'; ctx.strokeStyle='#2e7d32'; ctx.lineWidth=1.5;
+    roundRect(bx-9, by-5, 18, 10, 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#a5e8a8'; ctx.beginPath(); ctx.arc(bx, by, 2.4, 0, 6.29); ctx.fill();
+  }
+  // both labels go below the pile: the counter's own price row runs straight
+  // across the space above it
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#eaffe6'; ctx.strokeStyle='#1f5a22';
+  ctx.font='900 12px system-ui,sans-serif'; ctx.lineWidth=3.5;
+  ctx.strokeText('TAKINGS', p.sx, p.sy+22); ctx.fillText('TAKINGS', p.sx, p.sy+22);
+  ctx.font='900 18px system-ui,sans-serif'; ctx.lineWidth=4.5;
+  const tt = '$'+fmt(G.till);
+  ctx.strokeText(tt, p.sx, p.sy+41); ctx.fillText(tt, p.sx, p.sy+41);
 }
 
 /* ------------------------------------------------------------ pads */
@@ -2492,6 +2612,7 @@ function draw(){
   fenceLine(F.x+F.w+1, F.y-1, F.x+F.w+1, F.y+F.h+1);
 
   for(const s of STATIONS){ if(s.unlocked) for(const tr of s.trays) drawTray(s, tr); }
+  drawTillPad();
   for(const p of PADS) drawPadGround(p);
   drawStandPad();
   drawBoard();
@@ -2510,6 +2631,7 @@ function draw(){
   }
   for(const c of customers){ list.push({ d:c.x+c.y, f:()=>drawCustomer(c) }); }
   list.push({ d:(STALL.x+STALL.w/2)+(STALL.y+STALL.h/2), f:drawStall });
+  if(G.till >= 1){ const tc = rectCenter(TILL_PAD); list.push({ d:tc.x+tc.y, f:drawTillPile }); }
   for(const f of flyers){
     const x = lerp(f.x0,f.x1,f.t), y = lerp(f.y0,f.y1,f.t);
     const z = Math.sin(f.t*Math.PI)*f.h + 0.6;
@@ -2583,7 +2705,7 @@ function buildPills(){
     if(el('p-'+k)) continue;
     const d = document.createElement('div');
     d.className = 'pill pop hide'; d.id = 'p-'+k;
-    d.innerHTML = '<i>'+ITEMS[k].pill+'</i><span>0</span>';
+    d.innerHTML = '<i>'+iconTag(k)+'</i><span>0</span>';
     box.appendChild(d);
   }
 }
@@ -2600,7 +2722,13 @@ function syncHUD(){
   }
   const prev = levelReq(G.level-1), next = levelReq(G.level);
   el('levelfill').style.width = clamp((G.earned-prev)/(next-prev)*100,0,100)+'%';
-  el('lvltxt').textContent = 'LVL '+G.level+'  ·  '+rankAt(G.level).name;
+  el('lvlnum').textContent = 'LVL '+G.level;
+  el('lvlname').textContent = rankAt(G.level).name;
+  /* The bag panel belongs to a place: it opens at the counter or at the
+     stand, and closes itself the moment you wander off. */
+  const where = partyOn() ? null : bagSpot();
+  el('b-bag').classList.toggle('on', !!where);
+  if(bagOpen && bagOpen !== where) closeModal();
 }
 
 function hint(key, text, force){
@@ -2729,6 +2857,105 @@ function openShop(){
   });
 }
 
+/* ---------------------------------------------------------- the bag panel
+   Walking onto a tray moves the whole bag at once, which is fine until you
+   only want the takings, or only want to sell the cheese. The panel is the
+   deliberate version of the same thing: it opens within reach of the counter
+   or the stand and moves one good at a time.                              */
+function bagSpot(){
+  const a = player();
+  const sell = rectCenter(station('market').trays[0]);
+  if(dist2(a.x, a.y, sell.x, sell.y) < 25) return 'market';
+  const st = rectCenter(STAND);
+  if(dist2(a.x, a.y, st.x, st.y) < 25) return 'stand';
+  return null;
+}
+
+/* Sell one good outright. Never assume the stack is there: the market bug
+   that paid wheat rates for cheese started exactly that way. */
+function sellFromBag(k){
+  const a = player(), have = a.carry[k] || 0;
+  if(have <= 0) return 'There is none of that in the bag.';
+  a.carry[k] = 0;
+  const pay = ITEMS[k].price * have;
+  G.coins += pay; G.earned += pay;
+  sfx.coin(); spawnCoinFx();
+  pops.push({ x:a.x, y:a.y, z:1.3, t:0, txt:'+'+fmt(pay), col:'#7dff8d' });
+  checkLevel(); save();
+  return null;
+}
+
+/* Hand one good to the stand: into stock if a keeper minds it, otherwise
+   straight to whoever in the queue asked for it. */
+function standFromBag(k){
+  const a = player(), have = a.carry[k] || 0;
+  if(have <= 0) return 'There is none of that in the bag.';
+  if(hasKeeper()){
+    const room = stockRoom(k);
+    if(room <= 0) return 'The stall is already full of ' + ITEMS[k].label.toLowerCase() + '.';
+    const step = Math.min(have, room);
+    a.carry[k] -= step; G.stock[k] += step;
+    sfx.pick(); save();
+    pops.push({ x:a.x, y:a.y, z:1.3, t:0, txt:'+'+step+' in stock', col:'#8ef07a' });
+    return null;
+  }
+  let sold = 0, pay = 0;
+  for(const c of customers){
+    if(c.state!=='wait' || c.n<=0 || c.want!==k || a.carry[k]<=0) continue;
+    const step = Math.min(a.carry[k], c.n);
+    a.carry[k] -= step; c.n -= step; sold += step; pay += standPrice(k)*step;
+    if(c.n <= 0){
+      c.state='leave'; c.slot=-1; c.happy=1.4;
+      for(let i=0;i<10;i++) puffs.push({x:c.x,y:c.y,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
+        t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
+    }
+  }
+  if(!sold) return 'Nobody in the queue is asking for that.';
+  G.coins += pay; G.earned += pay;
+  sfx.coin(); spawnCoinFx();
+  pops.push({ x:a.x, y:a.y, z:1.5, t:0, txt:'+'+fmt(pay), col:'#7dff8d' });
+  checkLevel(); save();
+  return null;
+}
+
+let bagOpen = null;
+function openBag(where, msg){
+  const a = player(), keeper = hasKeeper();
+  const held = ITEM_ORDER.filter(k => a.carry[k] > 0);
+  let rows = held.map(k => {
+    const have = a.carry[k];
+    // the counter takes the lot, so its button can name the money. The stand
+    // only takes what the villager at the front asked for.
+    const label = where==='market' ? 'SELL $'+fmt(ITEMS[k].price*have) : (keeper ? 'STOCK IT' : 'SELL');
+    const note = where==='market' ? '' : ' \u00b7 $'+fmt(standPrice(k))+' each';
+    return '<div class="crow"><span class="ci">'+iconTag(k)+'</span>'+
+           '<span class="cn">'+ITEMS[k].label+' <span class="cq">\u00d7'+have+note+'</span></span>'+
+           '<button class="cb buy" data-k="'+k+'">'+label+'</button></div>';
+  }).join('');
+  if(!held.length) rows = '<p class="sub">Your bag is empty \u2014 go and fill it.</p>';
+  if(where==='market'){
+    const got = G.till >= 1;
+    rows += '<div class="crow till"><span class="ci">\u{1F4B5}</span>'+
+            '<span class="cn">Farmhand takings</span>'+
+            '<button class="cb '+(got?'buy':'')+'" data-k="__till">'+
+            (got ? 'COLLECT $'+fmt(G.till) : 'NOTHING YET')+'</button></div>';
+  }
+  modal(where==='market' ? 'At the counter' : 'At the farm stand',
+    '<div id="bag">'+ rows +'</div><div id="bagmsg">'+(msg||'')+'</div>', 'CLOSE');
+  bagOpen = where;                       // modal() clears it, so set it after
+
+  el('bag').querySelectorAll('.cb').forEach(btn=>{
+    btn.onclick = ()=>{
+      const k = btn.dataset.k;
+      let err = null;
+      if(k === '__till') err = collectTill() ? null : 'The farmhands have not sold anything yet.';
+      else err = where==='market' ? sellFromBag(k) : standFromBag(k);
+      // a level-up can put its own card on top; do not paint over it
+      if(bagOpen === where) openBag(where, err);
+    };
+  });
+}
+
 /* The ladder, so a player can see what the next title costs. Requirements are
    lifetime earnings, which is what levelReq() measures — not coins in hand. */
 function openRanks(){
@@ -2764,7 +2991,7 @@ function openJournal(){
 }
 
 let modalConfirm = null;
-function closeModal(){ el('modal').classList.remove('on'); modalConfirm = null; }
+function closeModal(){ el('modal').classList.remove('on'); modalConfirm = null; bagOpen = null; }
 function modal(title, html, btn, opts){
   opts = opts || {};
   el('m-title').textContent = title;
@@ -2775,6 +3002,7 @@ function modal(title, html, btn, opts){
   cancel.hidden = !opts.cancel;
   if(opts.cancel) cancel.textContent = opts.cancel;
   modalConfirm = opts.onConfirm || null;      // never survives the dialog that set it
+  bagOpen = null;                             // nor does the bag panel
   el('modal').classList.add('on');
 }
 el('m-ok').onclick = ()=>{ const fn = modalConfirm; closeModal(); if(fn) fn(); };
@@ -2792,6 +3020,7 @@ function winModal(){
     '<p class="sub">Gran would be unbearable about it. Keep playing \u2014 the pads go higher.</p>', 'RAISE A GLASS');
 }
 
+el('b-bag').onclick = ()=>{ const w = bagSpot(); if(w) openBag(w); };
 el('b-journal').onclick = openJournal;
 el('lvltxt').onclick = openRanks;
 el('b-shop').onclick = openShop;
