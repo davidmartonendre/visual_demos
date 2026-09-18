@@ -38,5 +38,14 @@ deliberately.
 - There is one save shape: `saveData()` builds it, `applySave()` restores it, and
   localStorage and the downloadable save file both carry exactly that. Add a field
   in `saveData()` and read it in `applySave()` — never write a second serialiser.
-- Imported saves are untrusted input: `importSave()` parses, shape-checks and only
-  then resets the world, so a bad paste can never leave a half-applied farm.
+- Imported saves are untrusted input: `importSave()` decodes, sanitises and only then
+  resets the world, so a bad paste can never leave a half-applied farm.
+- Saves are wrapped by `encodeSave()`/`decodeSave()`: the payload is scrambled and
+  stamped, so editing a save in a text editor makes it fail to load. Treat this as
+  tamper evidence only — the key is in this file and the console can edit `G`
+  directly. Never describe it as security.
+- `sanitiseSave()` is the real defence and must stay balance-independent. Clamp using
+  bounds that follow from the game's mechanics (upgrade `max`, coins <= earned +
+  START_COINS, payouts recomputed from goods), never from the cost table: costs are
+  retuned often, and a farm played across a rebalance would fail such a check and be
+  thrown away. That bug was written once already and removed.

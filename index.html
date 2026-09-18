@@ -284,7 +284,7 @@ function newActor(x,y,hand){
 }
 
 function resetGame(){
-  G = { coins:25, earned:0, level:1, up:{}, paid:{}, hands:0, t:0,
+  G = { coins:START_COINS, earned:0, level:1, up:{}, paid:{}, hands:0, t:0,
         sound:true, seenHint:{}, won:false, story:{}, journal:[], orders:[] };
   for(const id of UPGRADE_IDS) G.up[id] = 0;
   for(const p of PADS) G.paid[p.id]=0;
@@ -409,21 +409,148 @@ const SAVE_KEY = 'harvest-hero-v1';
 
 /* A save is a plain object. localStorage and the save file carry the same
    thing, so anything that round-trips through one round-trips through both. */
+const START_COINS = 25;
+
 function saveData(){
   return {
-    game:'harvest-hero', format:2,
+    game:'harvest-hero', format:3,
     savedAt:new Date().toISOString(), level:G.level,
     coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
     sound:G.sound, seenHint:G.seenHint, won:G.won,
     story:G.story, journal:G.journal, orders:G.orders };
 }
+
+/* ---- save envelope -----------------------------------------------------
+   The payload is scrambled and stamped so a save cannot be edited in a text
+   editor. This is tamper-EVIDENCE, not security: everything needed to forge
+   a stamp is in this file, and anyone with the console can set G.coins
+   directly. It stops casual editing, which is all a client-side game can do.
+   The second line of defence is sanitiseSave(), which throws away any value
+   the game itself could never have produced.                              */
+const STAMP_KEY = [0x5a,0x1c,0x7e,0x33,0xb2,0x6d,0x94,0xc8,0x21,0x4f,0xe3,0x08,0x77,0xa5];
+const STAMP_SALT = 'hollowbrook-mill-turns-again';
+
+function stamp(str){
+  let h1 = 0xdeadbeef ^ 0x48484, h2 = 0x41c6ce57 ^ 0x48484;
+  const s = str + STAMP_SALT;
+  for(let i=0; i<s.length; i++){
+    const ch = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1>>>0)).toString(36);
+}
+function pack(json){
+  const bytes = new TextEncoder().encode(json);
+  let bin = '';
+  for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i] ^ STAMP_KEY[i % STAMP_KEY.length]);
+  return btoa(bin);
+}
+function unpack(b64){
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i) ^ STAMP_KEY[i % STAMP_KEY.length];
+  return new TextDecoder().decode(bytes);
+}
+function encodeSave(obj){
+  const d = pack(JSON.stringify(obj));
+  return JSON.stringify({ game:'harvest-hero', format:3, d, s:stamp(d) });
+}
+/* -> { data } | { error } | { legacy } */
+function decodeSave(text){
+  let env;
+  try{ env = JSON.parse(text); }
+  catch(e){ return { error:'That is not a save file \u2014 check the whole thing was copied.' }; }
+  if(!env || typeof env !== 'object' || Array.isArray(env))
+    return { error:'That file does not contain a save.' };
+  if(typeof env.d !== 'string' || typeof env.s !== 'string'){
+    if(env.coins !== undefined || env.up) return { legacy:env };
+    return { error:'That does not look like a Harvest Hero save.' };
+  }
+  if(stamp(env.d) !== env.s)
+    return { error:'That save has been edited, so it will not load.' };
+  try{ return { data: JSON.parse(unpack(env.d)) }; }
+  catch(e){ return { error:'That save is damaged and cannot be read.' }; }
+}
+
+/* ---- keep only values the game could actually have produced ---- */
+const intIn = (v, lo, hi)=>{
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo;
+};
+function sanitiseSave(d){
+  const out = {};
+  out.up = {};
+  for(const pad of PADS) out.up[pad.id] = intIn((d.up||{})[pad.id], 0, pad.max);
+
+  out.earned = intIn(d.earned, 0, 1e15);
+  // every coin earned is added to `earned`, and spending only removes coins,
+  // so coins can never exceed the lifetime total plus the starting purse
+  out.coins  = intIn(d.coins, 0, out.earned + START_COINS);
+
+  // farmhands are exactly the times that pad was bought
+  out.hands  = out.up.hand;
+
+  out.paid = {};
+  for(const pad of PADS){
+    const lvl  = out.up[pad.id];
+    const cost = Math.round(pad.cost * Math.pow(pad.mul, lvl));
+    out.paid[pad.id] = lvl >= pad.max ? 0 : intIn((d.paid||{})[pad.id], 0, Math.max(0, cost-1));
+  }
+
+  out.sound = (d.sound !== false);
+  out.won   = !!d.won;
+
+  const ids = STORY.map(c=>c.id);
+  out.story = {};
+  for(const id of ids) if((d.story||{})[id]) out.story[id] = 1;
+  out.journal = Array.isArray(d.journal) ? d.journal.filter(id=>ids.includes(id)) : [];
+  out.seenHint = (d.seenHint && typeof d.seenHint === 'object' && !Array.isArray(d.seenHint)) ? d.seenHint : {};
+
+  // orders keep their goods but never their payout: that is recomputed here
+  out.orders = [];
+  if(Array.isArray(d.orders)) for(const o of d.orders.slice(0,2)){
+    if(!o || typeof o !== 'object') continue;
+    const items = {}, need = {};
+    for(const k of ITEM_ORDER){
+      const q = intIn((o.items||{})[k], 0, 5000);
+      if(q > 0){ items[k] = q; need[k] = intIn((o.need||{})[k], 0, q); }
+    }
+    if(!Object.keys(items).length) continue;
+    let pay = 0;
+    for(const k in items) pay += ITEMS[k].price * items[k];
+    out.orders.push({ items, need, pay: Math.round(pay * ORDER_BONUS) });
+  }
+
+  /* Deliberately NOT checked: that the upgrade levels are affordable out of
+     `earned`. Computing that needs the cost table, which changes whenever the
+     game is rebalanced, so a farm played across a balance change fails it and
+     the player loses everything. The coins clamp above is the same idea
+     without that flaw: it follows from how coins move, not from any number
+     that might be retuned later. */
+  return out;
+}
+
 function save(){
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(saveData())); }catch(e){}
+  try{ localStorage.setItem(SAVE_KEY, encodeSave(saveData())); }catch(e){}
+}
+let saveNotice = null;
+function rejectStored(text, why){
+  // keep the bad blob rather than letting the next autosave bury it
+  try{ localStorage.setItem(SAVE_KEY + '-rejected', text); localStorage.removeItem(SAVE_KEY); }catch(e){}
+  saveNotice = why;
 }
 function load(){
-  let d=null; try{ d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){}
+  let text=null; try{ text = localStorage.getItem(SAVE_KEY); }catch(e){}
+  if(!text) return;
+  const r = decodeSave(text);
+  if(r.error){ rejectStored(text, r.error + ' Starting a new farm.'); return; }
+  // a farm already in progress from an older build is migrated, then re-stamped
+  const d = r.data || r.legacy;
   if(!d) return;
-  applySave(d);
+  applySave(sanitiseSave(d));
+  if(r.legacy) save();
 }
 function applySave(d){
   G.coins=d.coins|0; G.earned=d.earned|0; G.hands=d.hands|0;
@@ -450,7 +577,7 @@ function saveFileName(){
 }
 function exportSave(){
   save();
-  const text = JSON.stringify(saveData(), null, 2);
+  const text = encodeSave(saveData());
   try{
     const url = URL.createObjectURL(new Blob([text], {type:'application/json'}));
     const a = document.createElement('a');
@@ -461,14 +588,13 @@ function exportSave(){
   }catch(e){ return false; }
 }
 function importSave(text){
-  let d;
-  try{ d = JSON.parse(text); }
-  catch(e){ return 'That is not valid JSON \u2014 check the whole file was copied.'; }
-  if(!d || typeof d !== 'object' || Array.isArray(d)) return 'That file does not contain a save.';
-  if(d.coins === undefined && !d.up) return 'That does not look like a Harvest Hero save.';
+  const r = decodeSave(text);
+  if(r.error) return r.error;
+  if(r.legacy) return 'That save is from an older version and cannot be imported.';
+  const clean = sanitiseSave(r.data);
   const keepSound = G.sound;
   resetGame();
-  applySave(d);
+  applySave(clean);
   G.sound = keepSound;
   const q = iso(player().x, player().y); cam.x = q.sx; cam.y = q.sy;
   buildPills(); syncHUD(); save();
@@ -1919,6 +2045,10 @@ function init(){
   syncHUD();
   hint('move','Drag anywhere to move. Sweep through the wheat!');
   checkStory();
+  if(saveNotice) modal('That save could not be loaded',
+    '<p>' + saveNotice + '</p>' +
+    '<p class="sub">The old file was kept aside rather than overwritten, so nothing is lost for good.</p>',
+    'START FRESH');
 }
 
 let last = performance.now();
