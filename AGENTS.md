@@ -7,6 +7,18 @@ deliberately.
 - The entire game is `index.html`: markup, CSS and JS in one file.
 - To run it, open `index.html`. Do not add a dev server, bundler or dependency
   unless asked — "no build step" is a feature of this project.
+- The one exception is `tests/`, which needs Playwright and nothing else. There is
+  no `package.json` anywhere and there must not be: the Azure deploy uploads the
+  repo root as-is, and a root `package.json` makes Oryx treat the site as a Node
+  app and fail the build looking for a build script.
+- **Run `node tests/run.js` before you push.** ~400 checks in under ten seconds
+  against the real file. Most of them exist because the thing they check was broken
+  once, and the comment above such a check says so — read it before deciding a
+  failure is the test's fault. When you fix a bug, add the check that would have
+  caught it; when you add a feature, add a spec for it.
+- `docs/architecture.md` is the map of this file — section line ranges, the recipes
+  for adding a good or a building, and the bugs that have already been written here
+  once. `docs/engine-options.md` is the standing plan for moving off a single file.
 - Rendering is canvas 2D with a hand-rolled isometric projection
   (`iso()`, `worldToScreen()`); the world is in tile units and screen work happens
   in iso-space pixels inside one `ctx.translate/scale` transform.
@@ -30,6 +42,15 @@ deliberately.
 - Anything the player can carry must be in `ITEM_ORDER` and `ITEMS`, have a case in
   `drawItem()`, and be produced either by a station recipe or a patch. `emptyBag()`
   builds every inventory, so never hand-write `{wheat:0, egg:0}` literals.
+- Never hard-code a list of goods anywhere else either: iterate `ITEM_ORDER` or
+  `availableItems()`. Four places were left listing only wheat/egg/pie after the
+  valley expanded, and the market's was harmful — it fell through to `'wheat'` for
+  anything unlisted, subtracted from an empty stack, and drove the wheat count
+  negative while paying wheat rates for cheese. Anything that picks an item to move
+  must pick one the actor is actually holding, and bail out when there is none.
+- Anything laid out along a building (stall produce, counter prices) must be spaced
+  from that building's own width and capped, or it marches off the end once enough
+  goods are unlocked.
 - `availableItems()` is the single source of truth for what exists yet; the HUD
   pills, the villagers' wants and the order board all derive from it, which is what
   keeps the game from asking for goods the player cannot make.
@@ -68,3 +89,28 @@ deliberately.
   START_COINS, payouts recomputed from goods), never from the cost table: costs are
   retuned often, and a farm played across a rebalance would fail such a check and be
   thrown away. That bug was written once already and removed.
+- Anything the player unloads somewhere with a cap (a tray, the stall's stock) must
+  reserve what is already in the air. The amount only goes up in the flyer's `onDone`,
+  so a loop that checks the stored figure keeps unloading against a number seconds
+  out of date and sails past the cap. Trays use `s.pend`; the stall uses `stockPend`,
+  which is deliberately not saved — nothing is in flight across a reload.
+- Farmhands come in jobs (`a.job`): `field` cuts wheat, `orchard` picks the groves,
+  `stall` minds the farm stand and never leaves it. A picker carries fruit, so the
+  "only ever wheat" rule above is really "only what `deliveryTarget()` can place" —
+  keep the two in step if a new job is added.
+- Farmhand takings go to `G.till` at the market, not to `G.coins`. The player
+  collects by stepping on the SELL tray. Never pay a hand's sale straight into coins:
+  it fires the coin effect continuously for work the player is not doing.
+- With a keeper hired the stand pad changes mode (`serveStand()` → `stockStand()`)
+  and `keeperServe()` works the queue from `G.stock`. Anything that touches the stand
+  has to handle both.
+- Every level has a rank title from `RANKS`; `rankAt()` resolves any level, including
+  ones above the top of the ladder. A banner fires only from `checkLevel()`, on a real
+  level-up that lands exactly on a rank. Loading a save recomputes the level from
+  lifetime earnings, and must never fire one — a returning player would get a stack.
+- `COSMETICS` and the party are bought from `openShop()` and stored in `G.cos` /
+  `G.wear`. `sanitiseSave()` drops anything not in the table and refuses to wear
+  something that is not owned.
+- The party (`startParty()` / `endParty()`) suspends work: `update()` skips harvesting,
+  stations, pads, customers, orders and story while `partyOn()`. Anything added to the
+  world loop needs deciding on one side of that branch or the other.
