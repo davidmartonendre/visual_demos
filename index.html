@@ -36,7 +36,10 @@
   #btmrow{display:flex;align-items:center;gap:8px;padding:8px 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
   .round{pointer-events:auto;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
     background:rgba(20,14,6,.6);color:#fff;font-size:19px;display:grid;place-items:center}
-  #lvltxt{font-size:14px;white-space:nowrap;color:rgba(255,255,255,.85);letter-spacing:.04em}
+  #lvltxt{pointer-events:auto;cursor:pointer;flex:1;min-width:0;font-size:13.5px;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.9);letter-spacing:.04em;
+    text-align:right;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+  #lvltxt:active{opacity:.6}
 
   /* ---------- tutorial / toast ---------- */
   #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:78px;z-index:6;
@@ -57,7 +60,58 @@
   #chapter .ch-t{font-size:17px;font-weight:900;color:#a8560f;letter-spacing:.01em}
   #chapter .ch-b{font-size:13.5px;font-weight:700;line-height:1.42}
 
+  /* ---------- milestone banner ---------- */
+  #banner{position:absolute;left:50%;transform:translate(-50%,-26px);z-index:8;
+    top:calc(env(safe-area-inset-top,0px) + 92px);width:min(360px,86vw);
+    padding:12px 18px 14px;border-radius:18px;text-align:center;
+    background:linear-gradient(#fff3c4,#f3d169);color:#6b4410;
+    box-shadow:0 7px 0 #c08f2a,0 14px 26px rgba(0,0,0,.45);
+    opacity:0;pointer-events:none;transition:opacity .35s,transform .35s}
+  #banner.on{opacity:1;transform:translate(-50%,0)}
+  #bn-k{font-size:11.5px;font-weight:900;letter-spacing:.16em;color:#b07a25;margin-bottom:2px}
+  #bn-t{font-size:19px;font-weight:900;letter-spacing:.02em;color:#a8560f;line-height:1.15}
+  #bn-l{font-size:13.5px;font-weight:700;margin-top:3px;line-height:1.35}
+
+  /* ---------- party ---------- */
+  #party{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);
+    z-index:7;display:none;flex-direction:column;align-items:center;gap:8px}
+  #party.on{display:flex}
+  #p-tip{font-size:13px;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.6);letter-spacing:.03em}
+  #p-dance{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:25px;letter-spacing:.06em;
+    color:#fff;padding:15px 52px 19px;border-radius:20px;
+    background:linear-gradient(#ff7bc8,#d8329a);box-shadow:0 6px 0 #9c1f70,0 10px 18px rgba(0,0,0,.4);
+    text-shadow:0 2px 0 rgba(0,0,0,.25);animation:bounce 1.07s ease-in-out infinite}
+  #p-dance:active{transform:translateY(5px);box-shadow:0 1px 0 #9c1f70}
+  @keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+  #p-end{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:13px;color:#4a3418;
+    padding:7px 16px 9px;border-radius:12px;background:rgba(255,248,230,.9);box-shadow:0 3px 0 #c9a96a}
+
+  /* ---------- shop ---------- */
+  #shop{text-align:left;max-height:56vh;overflow-y:auto}
+  .crow{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(122,79,29,.16)}
+  .crow.party{border-bottom:none;margin-top:4px;padding-top:11px;border-top:2px solid rgba(122,79,29,.25)}
+  .crow .ci{font-size:22px;width:26px;text-align:center}
+  .crow .cn{flex:1;font-size:14.5px;font-weight:800}
+  .cb{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:12.5px;color:#5c4526;
+    padding:7px 11px 9px;border-radius:10px;min-width:82px;
+    background:linear-gradient(#efe6d0,#d7c9a8);box-shadow:0 3px 0 #b0a084}
+  .cb.buy{background:linear-gradient(#7ed34f,#4da32c);color:#fff;box-shadow:0 3px 0 #34781d}
+  .cb.buy.poor{background:linear-gradient(#ded4bd,#c2b69c);color:#8a7b63;box-shadow:0 3px 0 #a3957c}
+  .cb.on{background:linear-gradient(#63c1ff,#2f8fe0);color:#fff;box-shadow:0 3px 0 #1d6bb0}
+  .cb:active{transform:translateY(2px);box-shadow:none}
+  #shopmsg{margin-top:8px;font-size:13px;font-weight:800;color:#b23b3b;min-height:16px}
+
   /* ---------- journal ---------- */
+  #ranks{text-align:left;max-height:50vh;overflow-y:auto;margin:-2px 0 4px}
+  .rr{display:flex;align-items:center;gap:9px;padding:6px 2px;border-bottom:1px solid rgba(122,79,29,.16)}
+  .rr:last-child{border-bottom:none}
+  .rr .rl{width:30px;flex:none;text-align:center;font-weight:900;font-size:13px;color:#a8560f}
+  .rr .rn{flex:1;font-size:14px;font-weight:800;min-width:0}
+  .rr .rq{font-size:11.5px;font-weight:800;color:#8a7b63;white-space:nowrap}
+  .rr.lock{opacity:.5}
+  .rr.cur{background:rgba(255,196,84,.28);border-radius:8px;box-shadow:inset 0 0 0 2px rgba(200,135,30,.5)}
+  .rr.cur .rn{color:#8a4708}
+  #rnext{margin-top:2px}
   #jrn{text-align:left;max-height:54vh;overflow-y:auto}
   #jrn .e{padding:10px 0;border-bottom:1px solid rgba(122,79,29,.18)}
   #jrn .e:last-child{border-bottom:none}
@@ -109,6 +163,14 @@
 
   <div id="chapter"><div class="ch-h"><div class="ch-i"></div><div class="ch-t"></div></div><div class="ch-b"></div></div>
 
+  <div id="banner"><div id="bn-k"></div><div id="bn-t"></div><div id="bn-l"></div></div>
+
+  <div id="party">
+    <div id="p-tip">Tap in time &mdash; two moves</div>
+    <button id="p-dance">DANCE</button>
+    <button id="p-end">BACK TO WORK</button>
+  </div>
+
   <div id="hint" class="pop"></div>
 
   <div id="bottom">
@@ -116,6 +178,7 @@
     <div id="btmrow">
       <button class="round" id="b-sound">&#128266;</button>
       <button class="round" id="b-journal" title="Journal">&#128214;</button>
+      <button class="round" id="b-shop" title="Shop">&#128717;</button>
       <button class="round" id="b-save" title="Save file">&#128190;</button>
       <button class="round" id="b-reset" title="Restart farm">&#8635;</button>
       <div id="lvltxt" class="pop">FARM LEVEL 1</div>
@@ -156,20 +219,23 @@ function fmt(n){
 }
 
 /* ---------------------------------------------------------------- world */
-const MAP = { w:40, h:52 };
+const MAP = { w:40, h:56 };
 
 /* Eight goods, three production chains:
      wheat -> flour -> (with egg) pie
      wheat -> egg / milk -> cheese
      apple -> jam                                                          */
-const ITEM_ORDER = ['wheat','apple','flour','egg','milk','jam','cheese','pie'];
+const ITEM_ORDER = ['wheat','apple','cherry','flour','egg','milk','jam','cherryjam','cheese','pie','cherrypie'];
 const ITEMS = {
   wheat: { label:'WHEAT',  price:3,  pill:'\u{1F33E}' },
   apple: { label:'APPLES', price:7,  pill:'\u{1F34E}' },
   flour: { label:'FLOUR',  price:9,  pill:'\u{1F35A}' },
   egg:   { label:'EGGS',   price:11, pill:'\u{1F95A}' },
   milk:  { label:'MILK',   price:16, pill:'\u{1F95B}' },
-  jam:   { label:'JAM',    price:34, pill:'\u{1F353}' },
+  jam:   { label:'APPLE JAM', price:34, pill:'\u{1F96B}' },
+  cherry:    { label:'CHERRIES',   price:14,  pill:'\u{1F352}' },
+  cherryjam: { label:'BLACK JAM',  price:95,  pill:'\u{1F36F}' },
+  cherrypie: { label:'CHERRY PIE', price:130, pill:'\u{1F9C1}' },
   cheese:{ label:'CHEESE', price:52, pill:'\u{1F9C0}' },
   pie:   { label:'PIES',   price:46, pill:'\u{1F967}' },
 };
@@ -179,8 +245,10 @@ const emptyBag = ()=>{ const o={}; for(const k of ITEM_ORDER) o[k]=0; return o; 
 const PATCHES = [
   { id:'field',   item:'wheat', kind:'crop', cell:1.0, regrow:7,  yieldMul:1, gate:null,
     rect:{ x:19, y:4,  w:13, h:24 } },
-  { id:'orchard', item:'apple', kind:'tree', cell:2.6, regrow:14, yieldMul:3, gate:'orchard',
-    rect:{ x:19, y:31, w:13, h:13 } },
+  { id:'orchard', item:'apple',  kind:'tree', cell:2.6, regrow:14, yieldMul:3, gate:'orchard',
+    fruit:'#d8402f', leaf:'#2f7a34', rect:{ x:19, y:31, w:6.5, h:13 } },
+  { id:'cherry',  item:'cherry', kind:'tree', cell:2.6, regrow:17, yieldMul:3, gate:'cherry',
+    fruit:'#8e1533', leaf:'#276b2c', rect:{ x:25.8, y:31, w:6.2, h:13 } },
 ];
 
 /* Stations sit on the far (west) side so nothing ever hides the player.
@@ -192,40 +260,44 @@ const STATIONS = [
 
   { id:'windmill', name:'WINDMILL', kind:'make', unlocked:false, motif:'sails',
     shape:'mill', b:{x:5.9,y:11.2,w:3.8,h:3.8}, roof:'#5b8ec4',
-    recipe:{ in:{wheat:2}, out:'flour', time:1.2 },
+    recipes:[ { in:{wheat:2}, out:'flour', time:1.2 } ],
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:10.9, w:2.0, h:1.9},
             {mode:'out', item:'flour', x:10.2, y:13.1, w:2.0, h:1.9} ] },
 
   { id:'coop', name:'CHICKEN COOP', kind:'make', unlocked:false, motif:'perch',
     shape:'shed', b:{x:5.8,y:17.1,w:4,h:3.4}, roof:'#e08a2e',
-    recipe:{ in:{wheat:2}, out:'egg', time:1.5 },
+    recipes:[ { in:{wheat:2}, out:'egg', time:1.5 } ],
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:16.9, w:2.0, h:1.9},
             {mode:'out', item:'egg',   x:10.2, y:19.1, w:2.0, h:1.9} ] },
 
   { id:'dairy', name:'DAIRY BARN', kind:'make', unlocked:false, motif:'silo',
     b:{x:4,y:23,w:6,h:4}, roof:'#b0453a',
-    recipe:{ in:{wheat:3}, out:'milk', time:1.8 },
+    recipes:[ { in:{wheat:3}, out:'milk', time:1.8 } ],
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:22.9, w:2.0, h:1.9},
             {mode:'out', item:'milk',  x:10.2, y:25.1, w:2.0, h:1.9} ] },
 
   { id:'cheese', name:'CHEESE CELLAR', kind:'make', unlocked:false, motif:'vent',
     b:{x:4,y:29,w:6,h:4}, roof:'#d9a441',
-    recipe:{ in:{milk:2}, out:'cheese', time:2.4 },
+    recipes:[ { in:{milk:2}, out:'cheese', time:2.4 } ],
     trays:[ {mode:'in',  item:'milk',   x:10.2, y:28.9, w:2.0, h:1.9},
             {mode:'out', item:'cheese', x:10.2, y:31.1, w:2.0, h:1.9} ] },
 
   { id:'bakery', name:'BAKERY', kind:'make', unlocked:false, motif:'chimney',
     b:{x:3,y:35,w:7,h:5}, roof:'#8e5bb5',
-    recipe:{ in:{flour:1, egg:1}, out:'pie', time:2.6 },
-    trays:[ {mode:'in',  item:'flour', x:10.2, y:34.9, w:2.0, h:1.9},
-            {mode:'in',  item:'egg',   x:10.2, y:37.1, w:2.0, h:1.9},
-            {mode:'out', item:'pie',   x:10.2, y:39.3, w:2.0, h:1.9} ] },
+    recipes:[ { in:{flour:1, cherry:2}, out:'cherrypie', time:3.0 },
+              { in:{flour:1, egg:1},     out:'pie',       time:2.6 } ],
+    trays:[ {mode:'in',  item:'flour',  x:10.2, y:34.9, w:2.0, h:1.9},
+            {mode:'in',  item:'egg',    x:10.2, y:37.1, w:2.0, h:1.9},
+            {mode:'in',  item:'cherry', x:10.2, y:39.3, w:2.0, h:1.9},
+            {mode:'out', item:'pie',    x:10.2, y:41.5, w:2.0, h:1.9} ] },
 
   { id:'jam', name:'JAM KITCHEN', kind:'make', unlocked:false, motif:'chimney',
-    b:{x:4,y:43,w:6,h:4}, roof:'#c2447a',
-    recipe:{ in:{apple:3}, out:'jam', time:2.2 },
-    trays:[ {mode:'in',  item:'apple', x:10.2, y:42.9, w:2.0, h:1.9},
-            {mode:'out', item:'jam',   x:10.2, y:45.1, w:2.0, h:1.9} ] },
+    b:{x:4,y:46,w:6,h:4}, roof:'#c2447a',
+    recipes:[ { in:{cherry:3}, out:'cherryjam', time:2.6 },
+              { in:{apple:3},  out:'jam',       time:2.2 } ],
+    trays:[ {mode:'in',  item:'apple',  x:10.2, y:45.9, w:2.0, h:1.9},
+            {mode:'in',  item:'cherry', x:10.2, y:48.1, w:2.0, h:1.9},
+            {mode:'out', item:'jam',    x:10.2, y:50.3, w:2.0, h:1.9} ] },
 ];
 const TRAY_CAP = 50;
 
@@ -235,40 +307,61 @@ const STALL = { x:33.2, y:5.4, w:2.4, h:2.0 };
 const STAND = { x:33.0, y:7.8, w:2.6, h:2.9 };
 const QUEUE = [ {x:34.3,y:11.4}, {x:34.3,y:13.1}, {x:34.3,y:14.8} ];
 const STAND_BONUS = 1.7;
+const STOCK_CAP = 999;          // per good, once a keeper minds the stall
 const standPrice = k => Math.round(ITEMS[k].price * STAND_BONUS);
 
 /* The town order board: bundles for the village, paid well above list. */
 const BOARD = { x:10.4, y:0.6, w:2.2, h:2.2 };
 const ORDER_BONUS = 2.3;
 
+/* Things to spend an absurd fortune on once the farm runs itself. */
+const COSMETICS = [
+  { id:'straw',  slot:'hat',   name:'Straw hat',       icon:'\u{1F452}', cost:500000 },
+  { id:'scarf',  slot:'neck',  name:'Red scarf',       icon:'\u{1F9E3}', cost:750000 },
+  { id:'crown',  slot:'hat',   name:'Flower crown',    icon:'\u{1F33C}', cost:1500000 },
+  { id:'gboots', slot:'boots', name:'Golden boots',    icon:'\u{1F97E}', cost:2500000 },
+  { id:'bunting',slot:'f-bunting', name:'Farm bunting',icon:'\u{1F38F}', cost:3000000 },
+  { id:'tophat', slot:'hat',   name:'Top hat',         icon:'\u{1F3A9}', cost:4000000 },
+  { id:'beds',   slot:'f-beds',name:'Flower beds',     icon:'\u{1F337}', cost:6000000 },
+];
+const PARTY_COST = 1000000;
+const owned = id => !!G.cos[id];
+const worn  = c  => G.wear[c.slot] === c.id;
+
 /* Upgrade pads — stand on one and your coins pour in until it's paid off. */
 const PADS = [
   { id:'scythe', name:'SCYTHE',       icon:'\u2702',     x:14.6, y:5.0,  cost:26,   mul:2.05, max:8,
     desc:l=>'Harvest speed '+(100+35*l)+'%', show:()=>true },
-  { id:'bag',    name:'BACKPACK',     icon:'\u{1F392}', x:17.4, y:8.6,  cost:22,   mul:1.34, max:20,
+  { id:'bag',    name:'BACKPACK',     icon:'\u{1F392}', x:17.4, y:8.4,  cost:22,   mul:1.34, max:20,
     desc:l=>'Carry '+capAt(l)+' items',      show:()=>true },
-  { id:'boots',  name:'BOOTS',        icon:'\u{1F462}', x:14.6, y:12.2, cost:70,   mul:1.9,  max:8,
+  { id:'boots',  name:'BOOTS',        icon:'\u{1F462}', x:14.6, y:11.8, cost:70,   mul:1.9,  max:8,
     desc:l=>'Move speed '+(100+15*l)+'%',    show:()=>G.earned>=70 },
-  { id:'windmill',name:'WINDMILL',    icon:'\u{1F3ED}', x:17.4, y:15.8, cost:130,  mul:1,    max:1,
+  { id:'windmill',name:'WINDMILL',    icon:'\u{1F3ED}', x:17.4, y:15.2, cost:130,  mul:1,    max:1,
     desc:()=>'Wheat \u2192 flour',            show:()=>G.earned>=120 },
-  { id:'field',  name:'FERTILIZER',   icon:'\u{1F331}', x:14.6, y:19.4, cost:180,  mul:1.9,  max:6,
+  { id:'field',  name:'FERTILIZER',   icon:'\u{1F331}', x:14.6, y:18.6, cost:180,  mul:1.9,  max:6,
     desc:l=>'Crops regrow '+(100+30*l)+'%',  show:()=>G.earned>=200 },
-  { id:'coop',   name:'CHICKEN COOP', icon:'\u{1F414}', x:17.4, y:23.0, cost:300,  mul:1,    max:1,
+  { id:'coop',   name:'CHICKEN COOP', icon:'\u{1F414}', x:17.4, y:22.0, cost:300,  mul:1,    max:1,
     desc:()=>'Wheat \u2192 eggs',             show:()=>G.up.windmill>0 },
-  { id:'hand',   name:'HIRE FARMHAND',icon:'\u{1F468}', x:14.6, y:26.6, cost:360,  mul:2.0,  max:6,
+  { id:'hand',   name:'HIRE FARMHAND',icon:'\u{1F468}', x:14.6, y:25.4, cost:360,  mul:2.0,  max:6,
     desc:l=>l+' hired (some are lazy)',      show:()=>G.up.coop>0 },
-  { id:'bakery', name:'BAKERY',       icon:'\u{1F967}', x:17.4, y:30.2, cost:1000, mul:1,    max:1,
+  { id:'bakery', name:'BAKERY',       icon:'\u{1F967}', x:17.4, y:28.8, cost:1000, mul:1,    max:1,
     desc:()=>'Flour + eggs \u2192 pies',      show:()=>G.up.coop>0 && G.earned>=900 },
-  { id:'crew',   name:'HIRE ARTISANS',icon:'\u{1F9D1}', x:14.6, y:33.8, cost:900, mul:1.85, max:8,
+  { id:'crew',   name:'HIRE ARTISANS',icon:'\u{1F9D1}', x:14.6, y:32.2, cost:900, mul:1.85, max:8,
     desc:l=>'Workshops make '+(1+l)+' per batch', show:()=>G.up.windmill>0 && G.earned>=800 },
-  { id:'dairy',  name:'DAIRY BARN',   icon:'\u{1F404}', x:17.4, y:37.4, cost:1800, mul:1,    max:1,
+  { id:'dairy',  name:'DAIRY BARN',   icon:'\u{1F404}', x:17.4, y:35.6, cost:1800, mul:1,    max:1,
     desc:()=>'Wheat \u2192 milk',             show:()=>G.up.bakery>0 },
-  { id:'cheese', name:'CHEESE CELLAR',icon:'\u{1F9C0}', x:14.6, y:41.0, cost:3200, mul:1,    max:1,
+  { id:'cheese', name:'CHEESE CELLAR',icon:'\u{1F9C0}', x:14.6, y:39.0, cost:3200, mul:1,    max:1,
     desc:()=>'Milk \u2192 cheese',            show:()=>G.up.dairy>0 },
-  { id:'orchard',name:'PLANT ORCHARD',icon:'\u{1F34E}', x:17.4, y:44.6, cost:4200, mul:1,    max:1,
+  { id:'orchard',name:'PLANT ORCHARD',icon:'\u{1F34E}', x:17.4, y:42.4, cost:4200, mul:1,    max:1,
     desc:()=>'An apple grove to pick',       show:()=>G.up.dairy>0 },
-  { id:'jam',    name:'JAM KITCHEN',  icon:'\u{1F353}', x:14.6, y:48.2, cost:6500, mul:1,    max:1,
+  { id:'jam',    name:'JAM KITCHEN',  icon:'\u{1F353}', x:14.6, y:45.8, cost:6500, mul:1,    max:1,
     desc:()=>'Apples \u2192 jam',             show:()=>G.up.orchard>0 },
+  { id:'cherry', name:'CHERRY GROVE',  icon:'\u{1F352}', x:17.4, y:49.2, cost:25000, mul:1,   max:1,
+    desc:()=>'Better pies and jam',          show:()=>G.up.jam>0 },
+  { id:'pickers',name:'HIRE PICKERS',  icon:'\u{1F9FA}', x:14.6, y:52.6, cost:15000, mul:2.2, max:4,
+    desc:l=>l+' picking the groves',         show:()=>G.up.cherry>0 },
+  { id:'keeper', name:'STALL KEEPER',  icon:'\u{1F9D1}', x:34.4, y:3.4,  cost:150000, mul:1,  max:1,
+    desc:()=>'Sells your stock for you',     show:()=>G.up.pickers>0 },
 ];
 const UPGRADE_IDS = PADS.map(p=>p.id);
 
@@ -285,16 +378,17 @@ function moveSpeed(){ return 5.0 * (1 + 0.15*G.up.boots); }
 function carried(a){ let n=0; for(const k of ITEM_ORDER) n += a.carry[k]; return n; }
 function patchOpen(p){ return !p.gate || G.up[p.gate] > 0; }
 
-function newActor(x,y,hand,lazy){
-  return { x, y, vx:0, vy:0, face:2.2, bob:0, hand:!!hand,
-           lazy: !!hand && (lazy === undefined ? Math.random() < 0.5 : !!lazy),
+function newActor(x,y,hand,lazy,job){
+  return { x, y, vx:0, vy:0, face:2.2, bob:0, hand:!!hand, job: job || (hand?'field':'player'),
+           lazy: !!hand && job!=='stall' && (lazy === undefined ? Math.random() < 0.5 : !!lazy),
            work: rnd(16,26), napT:0,
            carry:emptyBag(), cut:0, state:'seek', target:null, wait:0,
            tint: hand ? ['#4e7fd4','#d4684e','#5fb04e','#b45fd4','#d4a44e'][((typeof actors!=='undefined'&&actors)?actors.length:0)%5] : '#e2574c' };
 }
 
 function resetGame(){
-  G = { coins:START_COINS, earned:0, level:1, up:{}, paid:{}, hands:0, handLazy:[], t:0,
+  G = { coins:START_COINS, earned:0, level:1, up:{}, paid:{}, hands:0, handLazy:[], pickerLazy:[],
+        stock:emptyBag(), till:0, cos:{}, wear:{}, party:null, t:0,
         sound:true, seenHint:{}, won:false, story:{}, journal:[], orders:[] };
   for(const id of UPGRADE_IDS) G.up[id] = 0;
   for(const p of PADS) G.paid[p.id]=0;
@@ -313,10 +407,11 @@ function resetGame(){
     s.timer = 0;
     s.bin = emptyBag();
     s.pend = emptyBag();
-    s.out = 0;
+    s.out = emptyBag();
   }
   actors  = [ newActor(16.2, 11.0, false) ];
   flyers = []; pops = []; puffs = []; coinFx = []; customers = [];
+  stockPend = emptyBag();
   for(let i=0;i<7;i++) customers.push(newCustomer(i));
   refreshOrders();
   shake = 0;
@@ -327,19 +422,21 @@ const player = ()=> actors[0];
 /* -------------------------------------------------------------- customers
    Villagers walk the road, queue at the farm stand and buy what they want. */
 function availableItems(){
-  const out = [];
-  for(const k of ITEM_ORDER){
-    const src = STATIONS.find(s=>s.kind==='make' && s.recipe.out===k);
-    if(src){ if(src.unlocked) out.push(k); continue; }
-    const pat = PATCHES.find(p=>p.item===k);
-    if(pat && patchOpen(pat)) out.push(k);
-  }
-  return out;
+  const have = new Set();
+  for(const p of PATCHES) if(patchOpen(p)) have.add(p.item);
+  // repeat so a good made from a made good (cherry pie needs flour) is counted
+  for(let pass=0; pass<4; pass++)
+    for(const s of STATIONS){
+      if(!s.unlocked || s.kind!=='make') continue;
+      for(const r of s.recipes)
+        if(Object.keys(r.in).every(k => have.has(k))) have.add(r.out);
+    }
+  return ITEM_ORDER.filter(k => have.has(k));
 }
 const wantedItems = availableItems;
 function newCustomer(i){
   const c = { tint:['#4e7fd4','#d4684e','#5fb04e','#e0b23c','#9b59b6','#16a085','#e67e22'][i%7],
-              carry:{wheat:0,egg:0,pie:0}, cut:0, bob:0, moving:false, face:2.2,
+              carry:emptyBag(), cut:0, bob:0, moving:false, face:2.2,
               x:34.3+rnd(-.5,.5), y:MAP.h-2-i*1.8, slot:-1, order:i, happy:0 };
   resetCustomer(c, true);
   return c;
@@ -385,8 +482,64 @@ function updateCustomers(dt){
   }
 }
 
+function hasKeeper(){ return G.up.keeper > 0; }
+function stockTotal(){ let n=0; for(const k of ITEM_ORDER) n += G.stock[k]; return n; }
+
+/* Parcels already thrown at the stall but not yet landed. Stock only goes up
+   in the flyer's callback, so without this the loop keeps unloading against a
+   figure that is seconds out of date and sails past the cap -- the same trap
+   the trays avoid with their own pend counters. Not saved: it is always empty
+   between sessions, because flyers do not survive a reload.               */
+let stockPend = emptyBag();
+const stockRoom = k => STOCK_CAP - G.stock[k] - stockPend[k];
+
+/* With a keeper hired the stand pad becomes a bulk drop-off: you unload, they sell. */
+function stockStand(a, dt){
+  if(!inRect(a, STAND) || carried(a) <= 0) return false;
+  hint('stockit','Leave goods here \u2014 the keeper sells them off for you');
+  const step0 = flowStep(actorCap(a));
+  let did = false;
+  while(a.ioT >= IO_INTERVAL){
+    const k = ITEM_ORDER.find(k => a.carry[k] > 0 && stockRoom(k) > 0);
+    if(!k) break;
+    a.ioT -= IO_INTERVAL;
+    const step = Math.min(a.carry[k], Math.max(1, Math.min(step0, Math.ceil(a.carry[k]/8))), stockRoom(k));
+    a.carry[k] -= step; stockPend[k] += step;
+    const dst = { x: STALL.x + STALL.w/2, y: STALL.y + STALL.h/2 };
+    itemFlyer(k, {x:a.x, y:a.y}, dst, (n=>()=>{ stockPend[k] -= n; G.stock[k] += n; })(step));
+    did = true;
+  }
+  return did;
+}
+
+/* The keeper works the queue from stock, at the same over-market price. */
+function keeperServe(dt){
+  if(!hasKeeper() || stockTotal() <= 0) return;
+  G.keeperT = (G.keeperT || 0) + dt;
+  while(G.keeperT >= 0.28){
+    const c = customers.find(c => c.state==='wait' && c.n > 0 && G.stock[c.want] > 0);
+    if(!c) { G.keeperT = 0; return; }
+    G.keeperT -= 0.28;
+    const step = Math.min(c.n, G.stock[c.want], 4);
+    G.stock[c.want] -= step; c.n -= step;
+    const pay = standPrice(c.want) * step, cx = c.x, cy = c.y;
+    itemFlyer(c.want, keeperSpot(), {x:cx, y:cy}, ()=>{
+      G.coins += pay; G.earned += pay;
+      spawnCoinFx(); sfx.coin();
+      pops.push({x:cx, y:cy, z:1.5, t:0, txt:'+'+fmt(pay), col:'#7dff8d'});
+      checkLevel();
+    });
+    if(c.n <= 0){
+      c.state='leave'; c.slot=-1; c.happy=1.4;
+      for(let i=0;i<8;i++) puffs.push({x:cx,y:cy,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
+        t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
+    }
+  }
+}
+
 /* serve the front of the queue — player only, the farmhands never touch it */
 function serveStand(a, dt){
+  if(hasKeeper()) return stockStand(a, dt);     // the keeper does the selling now
   if(!inRect(a, STAND)) return false;
   const waiting = customers.filter(c=>c.state==='wait' && c.n>0);
   if(waiting.length) hint('stand','Villagers pay '+Math.round((STAND_BONUS-1)*100)+'% over market for what they ask for');
@@ -425,7 +578,9 @@ function saveData(){
   return {
     game:'harvest-hero', format:3,
     savedAt:new Date().toISOString(), level:G.level,
-    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands, handLazy:G.handLazy,
+    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
+    handLazy:G.handLazy, pickerLazy:G.pickerLazy, stock:G.stock, till:G.till,
+    cos:G.cos, wear:G.wear,
     sound:G.sound, seenHint:G.seenHint, won:G.won,
     story:G.story, journal:G.journal, orders:G.orders };
 }
@@ -506,6 +661,18 @@ function sanitiseSave(d){
     const v = Array.isArray(d.handLazy) ? d.handLazy[i] : undefined;
     out.handLazy.push(v === undefined ? Math.random() < 0.5 : !!v);   // older saves roll now
   }
+  out.pickerLazy = [];
+  for(let i=0;i<out.up.pickers;i++){
+    const v = Array.isArray(d.pickerLazy) ? d.pickerLazy[i] : undefined;
+    out.pickerLazy.push(v === undefined ? Math.random() < 0.5 : !!v);
+  }
+  out.stock = emptyBag();
+  for(const k of ITEM_ORDER) out.stock[k] = intIn((d.stock||{})[k], 0, STOCK_CAP);
+  out.till = intIn(d.till, 0, 1e12);
+  out.cos = {}; out.wear = {};
+  const shopIds = COSMETICS.map(c=>c.id).concat(['party']);
+  for(const id of shopIds) if((d.cos||{})[id]) out.cos[id] = 1;
+  for(const c of COSMETICS) if((d.wear||{})[c.slot] === c.id && out.cos[c.id]) out.wear[c.slot] = c.id;
 
   out.paid = {};
   for(const pad of PADS){
@@ -573,6 +740,11 @@ function applySave(d){
   G.sound = d.sound!==false; G.seenHint = d.seenHint||{}; G.won=!!d.won;
   G.story = d.story||{}; G.journal = d.journal||[];
   G.handLazy = Array.isArray(d.handLazy) ? d.handLazy.slice() : [];
+  G.pickerLazy = Array.isArray(d.pickerLazy) ? d.pickerLazy.slice() : [];
+  G.stock = Object.assign(emptyBag(), d.stock || {});
+  stockPend = emptyBag();          // nothing is in the air across a load
+  G.till = d.till | 0;
+  G.cos = d.cos || {}; G.wear = d.wear || {};
 
   /* Saves from before the valley expanded: a bakery used to run on raw wheat,
      so grant the mill that now feeds it rather than stranding the player. */
@@ -584,8 +756,14 @@ function applySave(d){
   refreshOrders();
   for(let i=0;i<G.hands;i++){
     if(G.handLazy[i] === undefined) G.handLazy[i] = Math.random() < 0.5;
-    actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true, G.handLazy[i]));
+    actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true, G.handLazy[i], 'field'));
   }
+  for(let i=0;i<(G.up.pickers||0);i++){
+    if(G.pickerLazy[i] === undefined) G.pickerLazy[i] = Math.random() < 0.5;
+    actors.push(newActor(PATCHES[1].rect.x+2+rnd(-1,1), PATCHES[1].rect.y+2+rnd(-1,1),
+                         true, G.pickerLazy[i], 'orchard'));
+  }
+  if(G.up.keeper > 0) actors.push(newActor(keeperSpot().x, keeperSpot().y, true, false, 'stall'));
 }
 
 /* ---- save files -------------------------------------------------------
@@ -808,6 +986,13 @@ function tryStations(a, dt){
       if(!inRect(a, tr)) continue;
 
       if(tr.mode==='sell'){
+        if(!a.hand && G.till > 0){
+          const take = Math.round(G.till); G.till = 0;
+          G.coins += take; G.earned += take;
+          sfx.buy(); checkLevel();
+          for(let i=0;i<10;i++) setTimeout(()=>spawnCoinFx(), i*45);
+          pops.push({x:a.x, y:a.y, z:1.6, t:0, txt:'+'+fmt(take), col:'#ffe066', big:true});
+        }
         if(carried(a)<=0) continue;
         const step0 = flowStep(actorCap(a));   // constant, so the stack always drains
         while(a.ioT >= IO_INTERVAL && carried(a)>0){
@@ -824,11 +1009,18 @@ function tryStations(a, dt){
           a.carry[it] -= step;
           const price = ITEMS[it].price * step;
           const p = {x:a.x, y:a.y};
+          const byHand = a.hand;
           itemFlyer(it, p, rectCenter({x:s.b.x,y:s.b.y,w:s.b.w,h:s.b.h}), ()=>{
-            G.coins += price; G.earned += price;
-            spawnCoinFx(); sfx.coin();
-            pops.push({x:a.x,y:a.y,z:1.3,t:0,txt:'+'+fmt(price),col:'#7dff8d'});
-            checkLevel();
+            if(byHand){
+              // a farmhand's takings wait in the till; constant coin flashes
+              // for someone else's work is just noise
+              G.till += price;
+            } else {
+              G.coins += price; G.earned += price;
+              spawnCoinFx(); sfx.coin();
+              pops.push({x:a.x,y:a.y,z:1.3,t:0,txt:'+'+fmt(price),col:'#7dff8d'});
+              checkLevel();
+            }
           });
         }
         hint('pad','Coins pay for UPGRADES — stand on a glowing pad');
@@ -851,20 +1043,21 @@ function tryStations(a, dt){
       }
 
       if(tr.mode==='out'){
-        const it = tr.item;
         // Farmhands must not lift finished goods: nothing they carry but wheat
         // can be unloaded anywhere they walk, so a stray pie would strand them.
         if(a.hand) continue;
-        if(s.out<=0 || carried(a)>=actorCap(a)) continue;
+        if(outTotal(s)<=0 || carried(a)>=actorCap(a)) continue;
         const step0 = flowStep(TRAY_CAP);
-        while(a.ioT >= IO_INTERVAL && s.out>0 && carried(a)<actorCap(a)){
+        while(a.ioT >= IO_INTERVAL && outTotal(s)>0 && carried(a)<actorCap(a)){
           a.ioT -= IO_INTERVAL;
-          const step = Math.min(s.out, step0, actorCap(a)-carried(a));
-          s.out -= step;
+          const it = ITEM_ORDER.find(k => s.out[k] > 0);
+          if(!it) break;
+          const step = Math.min(s.out[it], step0, actorCap(a)-carried(a));
+          s.out[it] -= step;
           const src=trayWorld(s,tr);
           a.carry[it] += step;
           itemFlyer(it, src, {x:a.x,y:a.y}, null);
-          if(!a.hand) sfx.pick();
+          sfx.pick();
         }
         return;
       }
@@ -873,25 +1066,27 @@ function tryStations(a, dt){
   if(a.ioT > 0.5) a.ioT = 0;
 }
 
+function outTotal(s){ let n=0; for(const k of ITEM_ORDER) n += s.out[k]; return n; }
+
 function produce(dt){
   for(const s of STATIONS){
     if(!s.unlocked || s.kind!=='make') continue;
-    const r = s.recipe;
-    const has = Object.keys(r.in).every(k => s.bin[k] >= r.in[k]);
-    if(has && s.out < TRAY_CAP){
+    // recipes are listed best-first, so a workshop uses the fancy fruit when it has it
+    const r = s.recipes.find(r => Object.keys(r.in).every(k => s.bin[k] >= r.in[k]));
+    const room = TRAY_CAP - outTotal(s);
+    if(r && room > 0){
       s.timer += dt;
       if(s.timer >= r.time){
         s.timer = 0;
-        // one batch, limited by stock and by tray room
         let batch = 1 + G.up.crew;
         for(const k in r.in) batch = Math.min(batch, Math.floor(s.bin[k] / r.in[k]));
-        batch = Math.max(1, Math.min(batch, TRAY_CAP - s.out));
+        batch = Math.max(1, Math.min(batch, room));
         for(const k in r.in) s.bin[k] -= r.in[k] * batch;
-        s.out += batch;
+        s.out[r.out] += batch;
         const c = {x:s.b.x+s.b.w/2, y:s.b.y+s.b.h/2};
         puffs.push({x:c.x,y:c.y,z:2.2,vx:0,vy:0,vz:1.6,t:0,life:.5,col:'#ffffff',r:5});
       }
-    } else s.timer = Math.min(s.timer, r.time);
+    } else s.timer = 0;
   }
 }
 
@@ -930,14 +1125,26 @@ function buyPad(p){
   const st = STATIONS.find(x=>x.id===p.id);
   if(st){
     st.unlocked = true;
-    const r = st.recipe;
+    const r = st.recipes && st.recipes[st.recipes.length-1];
     const ins = r ? Object.keys(r.in).map(k=>ITEMS[k].label.toLowerCase()).join(' + ') : '';
     hint('open'+p.id, st.name+' OPEN \u2014 ' + (r ? ins+' \u2192 '+ITEMS[r.out].label.toLowerCase() : 'ready'), true);
   }
   if(p.id==='orchard') hint('openorchard','The orchard is planted \u2014 walk under the trees to pick apples', true);
+  if(p.id==='pickers'){
+    const picker = newActor(PATCHES[1].rect.x+2, PATCHES[1].rect.y+2, true, undefined, 'orchard');
+    G.pickerLazy.push(picker.lazy);
+    actors.push(picker);
+    hint('pickers', picker.lazy
+      ? 'A picker joined the groves \u2014 this one looks like a napper.'
+      : 'A picker joined \u2014 they work the apple and cherry groves.', true);
+  }
+  if(p.id==='keeper'){
+    actors.push(newActor(keeperSpot().x, keeperSpot().y, true, false, 'stall'));
+    hint('keeper','The stall keeper is in. Drop goods at the stand and they sell them for you.', true);
+  }
   if(p.id==='hand'  ){
     G.hands++;
-    const hand = newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true);
+    const hand = newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true, undefined, 'field');
     G.handLazy.push(hand.lazy);
     actors.push(hand);
     hint('hand'+G.hands, hand.lazy
@@ -948,23 +1155,32 @@ function buyPad(p){
 }
 
 /* ------------------------------------------------------------ farmhand AI */
+function keeperSpot(){ return { x: STALL.x + STALL.w/2, y: STALL.y + STALL.h + 0.5 }; }
+
+/* Route by what the actor is actually holding: any input tray that takes it and
+   has room, emptiest first. The market is the fallback because it buys the lot,
+   so a hand can never be left carrying something with nowhere to put it.      */
 function deliveryTarget(a){
-  // only a wheat load belongs at a workshop; anything else goes to the market,
-  // which buys every good and can therefore never leave a hand holding something
-  if(a && a.carry.wheat > 0){
-    let best = null, bestFill = 1e9;
-    for(const st of STATIONS){
-      if(!st.unlocked || st.kind!=='make' || !st.recipe.in.wheat) continue;
-      const fill = st.bin.wheat + st.pend.wheat;
+  let best = null, bestFill = 1e9;
+  for(const st of STATIONS){
+    if(!st.unlocked || st.kind!=='make') continue;
+    for(const tr of st.trays){
+      if(tr.mode !== 'in' || !a.carry[tr.item]) continue;
+      const fill = st.bin[tr.item] + st.pend[tr.item];
       if(fill >= TRAY_CAP-2) continue;
-      if(fill < bestFill){ bestFill = fill; best = st.trays.find(t=>t.mode==='in' && t.item==='wheat'); }
+      if(fill < bestFill){ bestFill = fill; best = tr; }
     }
-    if(best) return best;
   }
-  return station('market').trays[0];
+  return best || station('market').trays[0];
 }
 
 function updateHand(a, dt){
+  if(a.job === 'stall'){                      // minds the stall, never leaves it
+    const spot = keeperSpot();
+    const dx = spot.x-a.x, dy = spot.y-a.y, m = Math.hypot(dx,dy);
+    if(m > 0.15) moveActor(a, dx/m, dy/m, 1, dt); else moveActor(a, 0,0,0, dt);
+    return;
+  }
   a.think = (a.think||0) - dt;
 
   /* Half of the farmhands you hire are lazy. They put in a decent stretch,
@@ -1003,8 +1219,9 @@ function updateHand(a, dt){
       if(!a.target || a.think<=0 || !a.target.ripe){
         a.think = 0.5;
         let best=null, bd=1e9;
+        const want = a.job==='orchard' ? 'tree' : 'crop';
         for(const p of PATCHES){
-          if(!patchOpen(p) || p.kind!=='crop') continue;   // hands work the field, you pick the fruit
+          if(!patchOpen(p) || p.kind!==want) continue;
           for(const t of p.nodes){
             if(!t.ripe) continue;
             let d = dist2(a.x,a.y,t.x,t.y);
@@ -1155,6 +1372,73 @@ function serveBoard(a, dt){
   return did;
 }
 
+/* ------------------------------------------------------------ the party
+   Bought once, thrown whenever. Work stops, the whole valley walks into the
+   wheat field and dances, and you join in with the button.                 */
+const PARTY_BPM = 112;
+const partyOn   = ()=> !!G.party;
+const partyBeat = ()=> G.party ? G.party.t * (PARTY_BPM/60) : 0;
+
+function partyCrowd(){ return actors.slice(1).concat(customers); }
+
+function startParty(){
+  const f = PATCHES[0].rect;
+  const cx = f.x + f.w/2, cy = f.y + f.h/2;
+  G.party = { t:0, lastBeat:-1, x:cx, y:cy };
+  const crowd = partyCrowd(), n = Math.max(10, crowd.length);
+  crowd.forEach((q,k)=>{
+    const an = (k/n)*6.283, r = 2.4 + (k%3)*1.6;
+    q.partyX = cx + Math.cos(an)*r;
+    q.partyY = cy + Math.sin(an)*r*0.85;
+    q.state = 'party'; q.dancing = false; q.vx = q.vy = 0;
+  });
+  const a = player();
+  a.x = cx; a.y = cy + 3.2; a.vx = a.vy = 0;
+  el('party').classList.add('on');
+  el('chapter').classList.remove('on'); chapterT = 0;
+  el('hint').classList.remove('on'); hintTimer = 0;
+}
+
+function endParty(){
+  G.party = null;
+  el('party').classList.remove('on');
+  for(const q of actors.slice(1)){ q.state='seek'; q.target=null; q.tray=null; q.dancing=false; }
+  for(const c of customers){ c.dancing=false; resetCustomer(c); }
+  save();
+}
+
+function partyMove(q, dt){
+  if(q.partyX === undefined) return;
+  const dx = q.partyX - q.x, dy = q.partyY - q.y, m = Math.hypot(dx,dy);
+  if(m > 0.2){
+    const sp = 5.2;
+    q.x += dx/m*sp*dt; q.y += dy/m*sp*dt;
+    q.bob += dt*sp*3.4; q.moving = true; q.face = Math.atan2(dy,dx);
+    q.dancing = false;
+  } else {
+    q.moving = false; q.vx = q.vy = 0; q.dancing = true;
+  }
+}
+
+const TUNE = [0,4,7,4, 9,7,4,2, 0,4,7,12, 9,7,4,0];
+function partyMusic(){
+  const b = Math.floor(partyBeat());
+  if(b === G.party.lastBeat) return;
+  G.party.lastBeat = b;
+  const root = 294;                                  // D
+  beep(root * Math.pow(2, TUNE[b % TUNE.length]/12), 0.16, 'square', 0.045);
+  if(b % 2 === 0) beep(root/2, 0.2, 'triangle', 0.05);
+  if(b % 4 === 2) beep(1500, 0.04, 'square', 0.022);
+}
+
+function playerDance(){
+  const a = player();
+  a.danceMove = a.danceMove ? 0 : 1;                  // two moves, alternating
+  a.danceT = 0.5;
+  a.dancing = true;
+  beep(700 + a.danceMove*180, 0.07, 'triangle', 0.04);
+}
+
 /* ------------------------------------------------------------ fx + level */
 function spawnCoinFx(){
   const a = player();
@@ -1164,11 +1448,56 @@ function spawnCoinFx(){
                 cx:p.x+rnd(-90,90), cy:p.y-rnd(90,190), t:0, dur:rnd(.45,.62), r:rnd(9,13) });
 }
 
+/* The rank ladder. Every level has a title; the ones listed here are where the
+   title changes, which is also where a banner fires — only on a real level-up,
+   never when a save is loaded and the level is recomputed from earnings.   */
+const RANKS = [
+  { lv:1,   name:'Field Hand',                 line:'Gran\u2019s boots, a rusty scythe, and a lot of weeds.' },
+  { lv:3,   name:'Farmer Novice',              line:'You have worked out which end of the scythe to hold.' },
+  { lv:5,   name:'Smallholder',                line:'The valley has started to notice you.' },
+  { lv:8,   name:'Crop Wrangler',              line:'The wheat does roughly what it is told now.' },
+  { lv:10,  name:'Proper Farmer',              line:'Nobody calls it Gran\u2019s old place any more.' },
+  { lv:14,  name:'Master of the Furrow',       line:'Your rows are straight enough to upset the neighbours.' },
+  { lv:20,  name:'Harvest Baron',              line:'Carts come a long way for your goods.' },
+  { lv:26,  name:'Duke of the Dairy',          line:'Cheese with your name on it, in three counties.' },
+  { lv:33,  name:'Hollowbrook\u2019s Finest',      line:'The market sets its prices by yours.' },
+  { lv:42,  name:'Archduke of Agriculture',    line:'People write to you about soil. You write back.' },
+  { lv:52,  name:'Grand Marshal of Marrows',   line:'Fifty levels. Gran would have had something to say.' },
+  { lv:65,  name:'Supreme Overseer of Soil',   line:'The weather checks with you first.' },
+  { lv:80,  name:'High Warden of the Valley',  line:'Every chimney in Hollowbrook is lit again.' },
+  { lv:100, name:'Legend of Hollowbrook',      line:'A hundred levels. Go and have a sit down.' },
+  { lv:125, name:'Emperor of Earthly Produce', line:'Your jam is discussed in parliaments.' },
+  { lv:155, name:'Grand Farmer Extraordinaire',line:'There is no larger hat. We checked.' },
+  { lv:190, name:'Ascended Agriculturalist',   line:'You harvest things that were not planted.' },
+  { lv:240, name:'Farmer Eternal, Tiller of Worlds', line:'Somewhere, a distant moon grows wheat in your honour.' },
+];
+function rankAt(lv){
+  let r = RANKS[0];
+  for(const x of RANKS){ if(lv >= x.lv) r = x; else break; }
+  return r;
+}
+function nextRank(lv){ return RANKS.find(x => x.lv > lv) || null; }
+let bannerT = 0;
+function showBanner(title, line, kicker){
+  el('bn-k').textContent = kicker || '';
+  el('bn-t').textContent = title;
+  el('bn-l').textContent = line;
+  el('banner').classList.add('on');
+  bannerT = 5.5;
+  sfx.buy(); shake = Math.max(shake, 8);
+  const a = player();
+  for(let i=0;i<40;i++) puffs.push({ x:a.x+rnd(-2.5,2.5), y:a.y+rnd(-2.5,2.5), z:rnd(1,3.5),
+    vx:rnd(-2.5,2.5), vy:rnd(-2.5,2.5), vz:rnd(1.5,4.5), t:0, life:rnd(.7,1.4),
+    col:['#ffe066','#ff9de0','#6fd0ff','#8ef07a','#ffb347'][i%5], r:rnd(2.5,4.5) });
+}
+
 function levelReq(n){ return Math.round(60*Math.pow(n,1.75)); }
 function checkLevel(){
   while(G.earned >= levelReq(G.level)){
     G.level++; sfx.levelup(); shake=Math.max(shake,7);
     pops.push({x:player().x, y:player().y, z:2.4, t:0, txt:'LEVEL '+G.level+'!', col:'#6fd0ff', big:true});
+    const r = RANKS.find(x => x.lv === G.level);
+    if(r) showBanner(r.name, r.line, 'LEVEL '+G.level);
     if(G.level>=15 && !G.won){ G.won=true; winModal(); }
     save();
   }
@@ -1177,15 +1506,22 @@ function checkLevel(){
 /* ------------------------------------------------------------ main update */
 function update(dt){
   G.t += dt;
+  const party = partyOn();
+  if(party){ G.party.t += dt; partyMusic(); }
   const a = player();
   const d = inputDir();
   moveActor(a, d.x, d.y, d.m, dt);
+  if(party){
+    if(a.danceT > 0){ a.danceT -= dt; if(a.danceT <= 0) a.dancing = false; }
+    for(const q of partyCrowd()) partyMove(q, dt);
+  } else {
   tryHarvest(a, dt);
   tryStations(a, dt);
   for(let i=1;i<actors.length;i++) updateHand(actors[i], dt);
 
   produce(dt);
   updatePads(dt);
+  }
 
   for(const p of PATCHES){
     if(!patchOpen(p)) continue;
@@ -1207,11 +1543,16 @@ function update(dt){
   }
   for(let i=coinFx.length-1;i>=0;i--){ const c=coinFx[i]; c.t+=dt/c.dur; if(c.t>=1){ bumpPill('p-coin'); coinFx.splice(i,1);} }
 
-  updateCustomers(dt);
-  checkStory();
-  if(G.orders.length < 2 || G.t - (G.orderT||0) > 6){ G.orderT = G.t; refreshOrders(); }
+  if(!party){
+    updateCustomers(dt);
+    keeperServe(dt);
+    checkStory();
+    if(G.orders.length < 2 || G.t - (G.orderT||0) > 6){ G.orderT = G.t; refreshOrders(); }
+  }
 
   shake = Math.max(0, shake - dt*26);
+  bannerT = Math.max(0, bannerT - dt);
+  if(bannerT===0) el('banner').classList.remove('on');
   chapterT = Math.max(0, chapterT - dt);
   if(chapterT===0) el('chapter').classList.remove('on');
   hintTimer = Math.max(0, hintTimer - dt);
@@ -1304,6 +1645,47 @@ function visible(p, m){ m=m||90; return p.sx>view.x0-m && p.sx<view.x1+m && p.sy
 
 const STALK = [[-12,3],[-5,7],[2,2],[9,6],[-1,-2]];
 const _vis = [];
+function drawFarmCosmetics(){
+  if(G.wear['f-beds'] === 'beds'){
+    for(let i=0;i<26;i++){
+      const y = 4 + i*2, x = (i%2) ? 10.9 : 18.3;
+      const q = iso(x, y);
+      if(!visible(q, 60)) continue;
+      for(let k=0;k<3;k++){
+        const fx = q.sx + (k-1)*9, fy = q.sy - (k%2)*4;
+        ctx.fillStyle='#3f8f36';
+        ctx.beginPath(); ctx.ellipse(fx, fy+3, 7, 3.5, 0,0,6.29); ctx.fill();
+        ctx.fillStyle=['#ef6a9a','#f4d03f','#9b7ede','#ff8b5e'][(i+k)%4];
+        ctx.beginPath(); ctx.arc(fx, fy - 4 + Math.sin(G.t*1.5+i+k)*1.2, 3.4, 0, 6.29); ctx.fill();
+        ctx.fillStyle='#fff8dc'; ctx.beginPath(); ctx.arc(fx, fy-4, 1.3, 0, 6.29); ctx.fill();
+      }
+    }
+  }
+  if(G.wear['f-bunting'] === 'bunting'){
+    const COLS = ['#e8544a','#f4d03f','#4fae4a','#5b8ec4','#c2447a'];
+    for(const y of [6, 16, 26, 36, 46]){
+      const a = iso(10.6, y), b = iso(18.2, y);
+      if(!visible(a, 160) && !visible(b, 160)) continue;
+      const hang = 16, top = 62;
+      ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(a.sx, a.sy-top); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(b.sx, b.sy); ctx.lineTo(b.sx, b.sy-top); ctx.stroke();
+      ctx.strokeStyle='#6b4a28'; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(a.sx, a.sy-top);
+      ctx.quadraticCurveTo((a.sx+b.sx)/2, (a.sy+b.sy)/2-top+hang*2, b.sx, b.sy-top);
+      ctx.stroke();
+      for(let i=1;i<10;i++){
+        const t = i/10, mt = 1-t;
+        const fx = mt*mt*a.sx + 2*mt*t*((a.sx+b.sx)/2) + t*t*b.sx;
+        const fy = mt*mt*(a.sy-top) + 2*mt*t*((a.sy+b.sy)/2-top+hang*2) + t*t*(b.sy-top);
+        const w2 = Math.sin(G.t*2 + i)*1.5;
+        poly([[fx-5,fy],[fx+5,fy],[fx+w2,fy+13]], COLS[i%COLS.length]);
+      }
+    }
+  }
+}
+
 function drawCrops(){
   for(const p of PATCHES){
     if(!patchOpen(p) || p.kind!=='crop') continue;
@@ -1358,7 +1740,9 @@ function drawCrops(){
 }
 
 /* An apple tree. Fades out when the player would be hidden behind it. */
-function drawTree(t){
+function drawTree(t, patch){
+  const FRUIT = (patch && patch.fruit) || '#d8402f';
+  const LEAF  = (patch && patch.leaf)  || '#2f7a34';
   const q = iso(t.x, t.y);
   if(!visible(q, 150)) return;
   const a = player();
@@ -1373,14 +1757,14 @@ function drawTree(t){
   ctx.beginPath(); ctx.ellipse(q.sx, q.sy, 24, 12, 0,0,6.29); ctx.fill();
   ctx.globalAlpha = ga;
   ctx.fillStyle='#7a4a22'; ctx.fillRect(q.sx-6, q.sy-34, 12, 34);
-  ctx.fillStyle='#2f7a34';
+  ctx.fillStyle=LEAF;
   ctx.beginPath(); ctx.ellipse(q.sx+sway, q.sy-58, 32, 27, 0,0,6.29); ctx.fill();
-  ctx.fillStyle='#3d9440';
+  ctx.fillStyle=shade(LEAF, 14);
   ctx.beginPath(); ctx.ellipse(q.sx-11+sway, q.sy-68, 21, 18, 0,0,6.29); ctx.fill();
-  ctx.fillStyle='#4fae4a';
+  ctx.fillStyle=shade(LEAF, 30);
   ctx.beginPath(); ctx.ellipse(q.sx+12+sway, q.sy-72, 16, 14, 0,0,6.29); ctx.fill();
   if(t.ripe){
-    ctx.fillStyle='#d8402f';
+    ctx.fillStyle=FRUIT;
     const spots=[[-18,-50],[-4,-62],[13,-54],[3,-42],[22,-64],[-14,-70]];
     for(let i=0;i<spots.length;i++){
       const r = 5*t.grow;
@@ -1665,6 +2049,37 @@ function drawItem(kind, x, y, s){
     ctx.beginPath(); ctx.moveTo(x, y-6*s); ctx.lineTo(x+1*s, y-9.5*s); ctx.stroke();
     ctx.fillStyle='#3d9440';
     ctx.beginPath(); ctx.ellipse(x+4*s, y-9*s, 3.4*s, 1.9*s, -0.5, 0, 6.29); ctx.fill();
+  } else if(kind==='cherry'){
+    ctx.strokeStyle='#4b7a2a'; ctx.lineWidth=1.7*s; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x-3*s, y-8*s); ctx.quadraticCurveTo(x, y-11*s, x+3*s, y-8*s); ctx.stroke();
+    for(const dx of [-4, 4]){
+      ctx.strokeStyle='#4b7a2a'; ctx.lineWidth=1.5*s;
+      ctx.beginPath(); ctx.moveTo(x+dx*0.5*s, y-8*s); ctx.lineTo(x+dx*s, y-1*s); ctx.stroke();
+      ctx.fillStyle='#8e1533';
+      ctx.beginPath(); ctx.arc(x+dx*s, y+3*s, 4.6*s, 0, 6.29); ctx.fill();
+      ctx.fillStyle='#c0325a';
+      ctx.beginPath(); ctx.arc(x+dx*s-1.4*s, y+1.6*s, 1.7*s, 0, 6.29); ctx.fill();
+    }
+  } else if(kind==='cherryjam'){
+    ctx.fillStyle='#5d1030';
+    roundRect(x-5.5*s, y-4*s, 11*s, 11*s, 2.5*s); ctx.fill();
+    ctx.fillStyle='#8e1f4d';
+    roundRect(x-5.5*s, y-4*s, 11*s, 4*s, 2*s); ctx.fill();
+    ctx.fillStyle='#f0d98a';
+    roundRect(x-6.5*s, y-7.5*s, 13*s, 4*s, 1.8*s); ctx.fill();
+    ctx.fillStyle='#d8b84a';
+    ctx.beginPath(); ctx.arc(x, y+2*s, 1.8*s, 0, 6.29); ctx.fill();
+  } else if(kind==='cherrypie'){
+    ctx.fillStyle='#b8305f';
+    ctx.beginPath(); ctx.ellipse(x, y+2*s, 10*s, 6*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#e9c078';
+    ctx.beginPath(); ctx.ellipse(x, y-1*s, 9.5*s, 6*s, 0,0,6.29); ctx.fill();
+    ctx.fillStyle='#8e1533';
+    for(const d of [[-4,-2],[3,-3],[0,1],[5,0]]){
+      ctx.beginPath(); ctx.arc(x+d[0]*s, y+d[1]*s, 1.9*s, 0, 6.29); ctx.fill();
+    }
+    ctx.strokeStyle='#d8a85c'; ctx.lineWidth=1.5*s;
+    for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(x-8*s, y-3*s+k*3*s); ctx.lineTo(x+8*s, y-3*s+k*3*s); ctx.stroke(); }
   } else if(kind==='flour'){
     ctx.fillStyle='#efe4cb';
     roundRect(x-6.5*s, y-5*s, 13*s, 12*s, 3.5*s); ctx.fill();
@@ -1690,9 +2105,9 @@ function drawItem(kind, x, y, s){
     ctx.beginPath(); ctx.arc(x+3*s, y+2*s, 1.6*s, 0, 6.29); ctx.fill();
     ctx.beginPath(); ctx.arc(x-2*s, y+3.6*s, 1.2*s, 0, 6.29); ctx.fill();
   } else if(kind==='jam'){
-    ctx.fillStyle='#b8305f';
+    ctx.fillStyle='#c2761b';                       // apple jam: amber, not strawberry
     roundRect(x-5.5*s, y-4*s, 11*s, 11*s, 2.5*s); ctx.fill();
-    ctx.fillStyle='#d94d7e';
+    ctx.fillStyle='#e09a35';
     roundRect(x-5.5*s, y-4*s, 11*s, 4*s, 2*s); ctx.fill();
     ctx.fillStyle='#e8d9b5';
     roundRect(x-6.5*s, y-7.5*s, 13*s, 4*s, 1.8*s); ctx.fill();
@@ -1718,6 +2133,19 @@ function drawTray(s, tr){
     ctx.font='900 26px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#8a5a00'; ctx.lineWidth=5;
     ctx.strokeText('SELL', p.sx, p.sy-6); ctx.fillText('SELL', p.sx, p.sy-6);
+    if(G.till > 0){                                // takings waiting to be collected
+      const bills = Math.min(14, 1 + Math.floor(Math.log10(1 + G.till) * 3));
+      for(let i=0;i<bills;i++){
+        const bx = p.sx - 34 + (i%3)*13, by = p.sy - 16 - Math.floor(i/3)*5;
+        ctx.fillStyle='#4caf50'; ctx.strokeStyle='#2e7d32'; ctx.lineWidth=1.5;
+        roundRect(bx-9, by-5, 18, 10, 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='#a5e8a8'; ctx.beginPath(); ctx.arc(bx, by, 2.4, 0, 6.29); ctx.fill();
+      }
+      ctx.font='900 16px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='#eaffe6'; ctx.strokeStyle='#1f5a22'; ctx.lineWidth=4;
+      const tt = '$'+fmt(G.till);
+      ctx.strokeText(tt, p.sx-21, p.sy-40); ctx.fillText(tt, p.sx-21, p.sy-40);
+    }
     const all = availableItems();
     const shown = all.slice(0, 4);                 // the counter is only so wide
     ctx.font='900 13px system-ui,sans-serif'; ctx.fillStyle='#fff'; ctx.lineWidth=4;
@@ -1729,11 +2157,14 @@ function drawTray(s, tr){
     });
     return;
   }
-  const n = tr.mode==='in' ? s.bin[tr.item] : s.out;
-  for(let i=0;i<Math.min(n,18);i++){
+  const n = tr.mode==='in' ? s.bin[tr.item] : outTotal(s);
+  const pile = [];
+  if(tr.mode==='in') for(let i=0;i<Math.min(n,18);i++) pile.push(tr.item);
+  else for(const k of ITEM_ORDER){ for(let i=0;i<s.out[k] && pile.length<18;i++) pile.push(k); }
+  pile.forEach((k,i)=>{
     const col2 = i%3, row = Math.floor(i/3);
-    drawItem(tr.item, p.sx + (col2-1)*15, p.sy + 4 - row*7 - (row%2)*2, 0.85);
-  }
+    drawItem(k, p.sx + (col2-1)*15, p.sy + 4 - row*7 - (row%2)*2, 0.85);
+  });
   ctx.font='900 17px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle='#fff'; ctx.strokeStyle='#00000066'; ctx.lineWidth=4;
   const lbl = (tr.mode==='in'?'FEED ':'TAKE ') + n;
@@ -1790,19 +2221,46 @@ function drawPerson(a, sx, sy, tint, opts){
   ctx.beginPath(); ctx.ellipse(sx, sy, napping?21:15, napping?9:7.5, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
   if(napping){ ctx.save(); ctx.translate(sx-9, sy+3); ctx.rotate(-1.28); ctx.translate(-sx, -sy); }
 
+  const wear = (a.job === 'player' && G.wear) ? G.wear : {};
+
+  /* dancing: a hop on every beat, arms up on one move and out on the other,
+     so mashing the button in time lands you on the same two the crowd does */
+  const dancing = partyOn() && a.dancing;
+  let hop = 0, lean = 0, armsUp = false;
+  if(dancing){
+    const beat = partyBeat();
+    const mv = (a.job === 'player') ? (a.danceMove || 0) : (Math.floor(beat) % 2);
+    hop = Math.abs(Math.sin(beat * Math.PI)) * 7;
+    armsUp = mv === 0;
+    lean = armsUp ? 0 : Math.sin(beat * Math.PI * 2) * 0.17;
+  }
+  if(lean){ ctx.save(); ctx.translate(sx, sy); ctx.rotate(lean); ctx.translate(-sx, -sy); }
+
   // legs
-  ctx.fillStyle='#3c5fa0';
+  ctx.fillStyle = wear.boots === 'gboots' ? '#e5b83a' : '#3c5fa0';
   roundRect(sx-9, sy-16+ (a.moving? Math.max(0,step)*-3:0), 8, 18, 4); ctx.fill();
   roundRect(sx+1, sy-16+ (a.moving? Math.max(0,-step)*-3:0), 8, 18, 4); ctx.fill();
   // torso
-  ctx.fillStyle=tint; roundRect(sx-12, sy-40+bob, 24, 27, 9); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.22)'; roundRect(sx-12, sy-40+bob, 24, 9, 6); ctx.fill();
+  ctx.fillStyle=tint; roundRect(sx-12, sy-40+bob-hop, 24, 27, 9); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.22)'; roundRect(sx-12, sy-40+bob-hop, 24, 9, 6); ctx.fill();
   // arms
   ctx.fillStyle=tint;
-  roundRect(sx-16, sy-38+bob+(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
-  roundRect(sx+9,  sy-38+bob-(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
+  if(dancing && armsUp){                        // both arms straight up
+    for(const sgn of [-1, 1]){
+      ctx.save(); ctx.translate(sx+sgn*11, sy-36+bob-hop); ctx.rotate(sgn*(Math.PI-0.28));
+      roundRect(-3.4, 0, 6.8, 17, 3.4); ctx.fill(); ctx.restore();
+    }
+  } else if(dancing){                           // arms out to the sides
+    for(const sgn of [-1, 1]){
+      ctx.save(); ctx.translate(sx+sgn*11, sy-34+bob-hop); ctx.rotate(sgn*(Math.PI/2 + 0.2));
+      roundRect(-3.4, 0, 6.8, 16, 3.4); ctx.fill(); ctx.restore();
+    }
+  } else {
+    roundRect(sx-16, sy-38+bob+(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
+    roundRect(sx+9,  sy-38+bob-(a.moving?step*2:0), 7, 18, 3.5); ctx.fill();
+  }
   // head
-  const hy = sy-50+bob;
+  const hy = sy-50+bob-hop;
   ctx.fillStyle='#f4c79c'; ctx.beginPath(); ctx.arc(sx, hy, 11.5, 0, 6.29); ctx.fill();
   ctx.fillStyle=opts.hair||'#5b3a1c';
   ctx.beginPath(); ctx.arc(sx, hy-2, 11.5, Math.PI*1.03, Math.PI*2.05); ctx.fill();
@@ -1819,6 +2277,32 @@ function drawPerson(a, sx, sy, tint, opts){
   ctx.strokeStyle='#b5745a'; ctx.lineWidth=1.6; ctx.lineCap='round';
   ctx.beginPath(); ctx.arc(sx+flip*2, hy+4.5, 3.2, 0.35, Math.PI-0.35); ctx.stroke();
 
+  if(wear.neck === 'scarf'){
+    ctx.fillStyle='#c9342f'; roundRect(sx-13, hy+9, 26, 7, 3.5); ctx.fill();
+    ctx.fillStyle='#e0574f';
+    const sway = Math.sin(G.t*4 + (a.moving?a.bob:0))*3;
+    roundRect(sx+flip*8, hy+13, 7, 15+sway*0.4, 3); ctx.fill();
+  }
+  if(wear.hat === 'straw'){
+    ctx.fillStyle='#e0b95c';
+    ctx.beginPath(); ctx.ellipse(sx, hy-7, 20, 7, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle='#efd07d'; roundRect(sx-9, hy-17, 18, 11, 5); ctx.fill();
+    ctx.fillStyle='#a8722c'; roundRect(sx-9, hy-9, 18, 4, 2); ctx.fill();
+  } else if(wear.hat === 'crown'){
+    for(let i=0;i<7;i++){
+      const an = Math.PI + i*(Math.PI/6);
+      const fx = sx + Math.cos(an)*11.5, fy = hy - 3 + Math.sin(an)*7;
+      ctx.fillStyle=['#f4d03f','#ef8fb5','#fff','#9be07a'][i%4];
+      ctx.beginPath(); ctx.arc(fx, fy, 3.6, 0, 6.29); ctx.fill();
+      ctx.fillStyle='#e8a13a'; ctx.beginPath(); ctx.arc(fx, fy, 1.4, 0, 6.29); ctx.fill();
+    }
+  } else if(wear.hat === 'tophat'){
+    ctx.fillStyle='#2b2b33';
+    ctx.beginPath(); ctx.ellipse(sx, hy-8, 17, 5.5, 0, 0, 6.29); ctx.fill();
+    roundRect(sx-10, hy-30, 20, 23, 3); ctx.fill();
+    ctx.fillStyle='#8b1e2d'; roundRect(sx-10, hy-14, 20, 5, 2); ctx.fill();
+  }
+
   // scythe swing while cutting
   if(a.cut>0){
     const ang = -0.9 + Math.sin(G.t*13)*0.75;
@@ -1831,8 +2315,9 @@ function drawPerson(a, sx, sy, tint, opts){
   }
 
   // carried stack
-  const total = carried(a), SHOW = 9, STEP = 8.5;
+  const total = dancing ? 0 : carried(a), SHOW = 9, STEP = 8.5;
   let idx = 0;
+  if(!dancing)
   for(const k of ITEM_ORDER){
     for(let i=0;i<a.carry[k];i++){
       if(idx>=SHOW) break;
@@ -1847,6 +2332,12 @@ function drawPerson(a, sx, sy, tint, opts){
     ctx.font='900 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#00000099'; ctx.lineWidth=4;
     ctx.strokeText(total, sx, ty); ctx.fillText(total, sx, ty);
+  }
+  if(lean) ctx.restore();
+  if(dancing && Math.random() < 0.06){
+    puffs.push({ x:a.x + rnd(-.5,.5), y:a.y + rnd(-.5,.5), z:rnd(1.4,2.4),
+      vx:rnd(-.8,.8), vy:rnd(-.8,.8), vz:rnd(.8,1.8), t:0, life:rnd(.5,.9),
+      col:['#ffe066','#ff9de0','#6fd0ff','#8ef07a'][Math.floor(rnd(0,4))], r:rnd(2,3.6) });
   }
   if(napping){
     ctx.restore();
@@ -1908,7 +2399,14 @@ function drawStandPad(){
   const c = rectCenter(STAND), p = iso(c.x, c.y);
   ctx.font='900 21px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle='#fff'; ctx.strokeStyle='#6b4a00'; ctx.lineWidth=5;
-  ctx.strokeText('SERVE', p.sx, p.sy-4); ctx.fillText('SERVE', p.sx, p.sy-4);
+  const label = hasKeeper() ? 'STOCK' : 'SERVE';
+  ctx.strokeText(label, p.sx, p.sy-6); ctx.fillText(label, p.sx, p.sy-6);
+  if(hasKeeper()){
+    const n = stockTotal();
+    ctx.font='900 15px system-ui,sans-serif'; ctx.lineWidth=4;
+    const t = n ? fmt(n)+' in stock' : 'drop goods here';
+    ctx.strokeText(t, p.sx, p.sy+14); ctx.fillText(t, p.sx, p.sy+14);
+  }
 }
 
 function lerpPt(a, b, t){ return [lerp(a.sx,b.sx,t), lerp(a.sy,b.sy,t)]; }
@@ -1923,7 +2421,8 @@ function drawStall(){
   poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#a87740');
   poly([up(N,H),up(E,H),up(S,H),up(W,H)], '#e8d3ac');
   // produce sitting on the counter
-  const shown = wantedItems().slice(0, 4);        // only what fits on the counter
+  const stocked = hasKeeper() ? ITEM_ORDER.filter(k=>G.stock[k]>0) : [];
+  const shown = (stocked.length ? stocked : wantedItems()).slice(0, 4);
   shown.forEach((k,i)=>{
     const u = (i + 0.5) / shown.length;           // spread across its actual width
     const q = iso(b.x + u*b.w, b.y + b.h/2);
@@ -1983,6 +2482,7 @@ function draw(){
   view = { x0:cam.x-CW/(2*ZOOM), x1:cam.x+CW/(2*ZOOM), y0:cam.y-CH/(2*ZOOM), y1:cam.y+CH/(2*ZOOM) };
 
   drawGround();
+  drawFarmCosmetics();
   drawCrops();
 
   // fences around the field
@@ -2001,7 +2501,7 @@ function draw(){
   for(const d of decor) list.push({ d:d.x+d.y, f:()=>drawDecorItem(d) });
   for(const p of PATCHES){
     if(!patchOpen(p) || p.kind!=='tree') continue;
-    for(const t of p.nodes) list.push({ d:t.x+t.y, f:()=>drawTree(t) });
+    for(const t of p.nodes) list.push({ d:t.x+t.y, f:()=>drawTree(t, p) });
   }
   for(const s of STATIONS){ if(s.unlocked) list.push({ d:(s.b.x+s.b.w/2)+(s.b.y+s.b.h/2), f:()=>drawBuilding(s) }); }
   for(const a of actors){
@@ -2100,7 +2600,7 @@ function syncHUD(){
   }
   const prev = levelReq(G.level-1), next = levelReq(G.level);
   el('levelfill').style.width = clamp((G.earned-prev)/(next-prev)*100,0,100)+'%';
-  el('lvltxt').textContent = 'LEVEL '+G.level+'  ·  $'+fmt(G.earned);
+  el('lvltxt').textContent = 'LVL '+G.level+'  ·  '+rankAt(G.level).name;
 }
 
 function hint(key, text, force){
@@ -2185,6 +2685,74 @@ function openSaveFile(){
   };
 }
 
+function openShop(){
+  const rows = COSMETICS.map(c=>{
+    const own = owned(c.id), on = worn(c);
+    const state = !own ? '$'+fmt(c.cost) : (on ? 'WORN' : 'WEAR');
+    const cls = !own ? (G.coins >= c.cost ? 'buy' : 'buy poor') : (on ? 'on' : '');
+    return '<div class="crow"><span class="ci">'+c.icon+'</span>'+
+           '<span class="cn">'+c.name+'</span>'+
+           '<button class="cb '+cls+'" data-c="'+c.id+'">'+state+'</button></div>';
+  }).join('');
+  const partyState = G.cos.party ? 'THROW IT' : '$'+fmt(PARTY_COST);
+  modal('The good life',
+    '<div id="shop">'+
+      '<p class="sub">Your farm makes more than you can spend. Spend it.</p>'+ rows +
+      '<div class="crow party"><span class="ci">\u{1F389}</span>'+
+      '<span class="cn">Throw a village party</span>'+
+      '<button class="cb '+(G.cos.party?'on':(G.coins>=PARTY_COST?'buy':'buy poor'))+'" data-c="party">'+partyState+'</button></div>'+
+      '<div id="shopmsg"></div>'+
+    '</div>', 'CLOSE');
+
+  const msg = el('shopmsg');
+  el('shop').querySelectorAll('.cb').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.c;
+      if(id === 'party'){
+        if(!G.cos.party){
+          if(G.coins < PARTY_COST){ msg.textContent = 'Not yet \u2014 that costs $'+fmt(PARTY_COST)+'.'; return; }
+          G.coins -= PARTY_COST; G.cos.party = 1;
+        }
+        closeModal(); startParty(); save(); return;
+      }
+      const c = COSMETICS.find(x=>x.id===id);
+      if(!owned(c.id)){
+        if(G.coins < c.cost){ msg.textContent = 'Not yet \u2014 that costs $'+fmt(c.cost)+'.'; return; }
+        G.coins -= c.cost; G.cos[c.id] = 1; G.wear[c.slot] = c.id;
+        sfx.buy(); shake = Math.max(shake, 6);
+      } else {
+        G.wear[c.slot] = worn(c) ? null : c.id;   // one hat at a time
+        sfx.pick();
+      }
+      save(); openShop();                          // redraw the list in place
+    };
+  });
+}
+
+/* The ladder, so a player can see what the next title costs. Requirements are
+   lifetime earnings, which is what levelReq() measures — not coins in hand. */
+function openRanks(){
+  const here = rankAt(G.level), nx = nextRank(G.level);
+  let html = '<div id="ranks">';
+  for(const r of RANKS){
+    const got = G.level >= r.lv, cur = r === here;
+    html += '<div class="rr'+(cur?' cur':'')+(got?'':' lock')+'">'+
+            '<span class="rl">'+(cur?'\u2605':(got?'\u2713':r.lv))+'</span>'+
+            '<span class="rn">'+r.name+'</span>'+
+            '<span class="rq">'+(cur?'you are here':(got?'lvl '+r.lv
+                : 'lvl '+r.lv+' \u00b7 $'+fmt(levelReq(r.lv-1))+' earned'))+'</span></div>';
+  }
+  html += '</div>';
+  const need = levelReq(G.level) - G.earned;
+  html += '<p class="sub" id="rnext">'+ (nx
+      ? 'Level '+(G.level+1)+' in $'+fmt(Math.max(0,need))+' more earned. '+
+        '<b>'+nx.name+'</b> waits at level '+nx.lv+'.'
+      : 'There is nothing above you. Sorry.') +'</p>';
+  modal('Levels \u0026 titles', html, 'CLOSE');
+  const cur = el('ranks').querySelector('.cur');
+  if(cur) cur.scrollIntoView({ block:'center' });
+}
+
 function openJournal(){
   let html = '<div id="jrn">';
   for(const c of STORY){
@@ -2225,6 +2793,11 @@ function winModal(){
 }
 
 el('b-journal').onclick = openJournal;
+el('lvltxt').onclick = openRanks;
+el('b-shop').onclick = openShop;
+el('p-dance').onclick = playerDance;
+el('p-end').onclick = endParty;
+addEventListener('keydown', e=>{ if(e.code === 'Space' && partyOn()){ e.preventDefault(); playerDance(); } });
 el('b-save').onclick = openSaveFile;
 el('b-sound').onclick = ()=>{
   G.sound = !G.sound;
