@@ -191,13 +191,13 @@ const STATIONS = [
     trays:[ {mode:'sell', x:10.2, y:3.4, w:2.0, h:4.2} ] },
 
   { id:'windmill', name:'WINDMILL', kind:'make', unlocked:false, motif:'sails',
-    b:{x:4,y:11,w:6,h:4}, roof:'#5b8ec4',
+    shape:'mill', b:{x:4.7,y:11,w:5.3,h:4}, roof:'#5b8ec4',
     recipe:{ in:{wheat:2}, out:'flour', time:1.2 },
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:10.9, w:2.0, h:1.9},
             {mode:'out', item:'flour', x:10.2, y:13.1, w:2.0, h:1.9} ] },
 
   { id:'coop', name:'CHICKEN COOP', kind:'make', unlocked:false, motif:'perch',
-    b:{x:4,y:17,w:6,h:4}, roof:'#e08a2e',
+    shape:'shed', b:{x:5.8,y:17.1,w:4,h:3.4}, roof:'#e08a2e',
     recipe:{ in:{wheat:2}, out:'egg', time:1.5 },
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:16.9, w:2.0, h:1.9},
             {mode:'out', item:'egg',   x:10.2, y:19.1, w:2.0, h:1.9} ] },
@@ -1423,40 +1423,128 @@ function roundRect(x,y,w,h,r){
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
+/* ---- putting things on a wall -------------------------------------------
+   A face is two ground corners plus the wall height. (u,v) runs along the
+   wall and up it, so a door or window is a parallelogram in screen space
+   and sits flat on the building instead of floating in front of it.      */
+const facePt = (P0,P1,H,u,v)=>[ lerp(P0.sx,P1.sx,u), lerp(P0.sy,P1.sy,u) - v*H ];
+function faceQuad(P0,P1,H,u0,u1,v0,v1){
+  return [ facePt(P0,P1,H,u0,v0), facePt(P0,P1,H,u1,v0),
+           facePt(P0,P1,H,u1,v1), facePt(P0,P1,H,u0,v1) ];
+}
+function drawDoor(P0,P1,H,u,hw,hv,col){
+  col = col || '#8a5a2b';
+  poly(faceQuad(P0,P1,H,u-hw,u+hw,0,hv), col, '#00000033', 2);
+  poly(faceQuad(P0,P1,H,u-hw*0.74,u+hw*0.74,0.02,hv*0.9), shade(col,-26));
+  const k = facePt(P0,P1,H,u+hw*0.45,hv*0.45);
+  ctx.fillStyle='#f2d791'; ctx.beginPath(); ctx.arc(k[0],k[1],2.8,0,6.29); ctx.fill();
+}
+function drawWindow(P0,P1,H,u,v,hw,hv){
+  poly(faceQuad(P0,P1,H,u-hw,u+hw,v-hv,v+hv), '#fdf7e6', '#00000022', 2);
+  poly(faceQuad(P0,P1,H,u-hw*0.74,u+hw*0.74,v-hv*0.72,v+hv*0.72), '#8ec6e6');
+  poly(faceQuad(P0,P1,H,u-hw*0.7,u-hw*0.05,v-hv*0.66,v+hv*0.64), 'rgba(255,255,255,.4)');
+  ctx.strokeStyle='#efe3c6'; ctx.lineWidth=2;
+  let a=facePt(P0,P1,H,u,v-hv*0.72), c=facePt(P0,P1,H,u,v+hv*0.72);
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(c[0],c[1]); ctx.stroke();
+  a=facePt(P0,P1,H,u-hw*0.74,v); c=facePt(P0,P1,H,u+hw*0.74,v);
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(c[0],c[1]); ctx.stroke();
+}
+
 function drawBuilding(s){
-  const b = s.b, H = 74, RH = 40;
+  const b = s.b;
+  const shape = s.shape || 'house';
+  const H  = shape==='mill' ? 92 : shape==='shed' ? 60 : 74;
+  const RH = shape==='mill' ? 50 : shape==='shed' ? 34 : 40;
+  const OV = 0.25;                                   // roof overhang, in tiles
+  const wallS = '#f3e6cb', wallE = '#dbcaa9';
+
   const N=iso(b.x,b.y), E=iso(b.x+b.w,b.y), S=iso(b.x+b.w,b.y+b.h), W=iso(b.x,b.y+b.h);
+  const rN=iso(b.x-OV,b.y-OV), rE=iso(b.x+b.w+OV,b.y-OV),
+        rS=iso(b.x+b.w+OV,b.y+b.h+OV), rW=iso(b.x-OV,b.y+b.h+OV);
   const up=(p,h)=>[p.sx, p.sy-h];
-  // shadow
-  ctx.globalAlpha=.25; ctx.fillStyle='#000';
-  poly([[N.sx,N.sy+6],[E.sx+8,E.sy+6],[S.sx,S.sy+8],[W.sx-8,W.sy+6]],'#000'); ctx.globalAlpha=1;
-  // walls
-  poly([up(W,0),up(S,0),up(S,H),up(W,H)], '#f0e2c6');          // front-left
-  poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#d8c8a8');          // front-right
-  // door
-  const dc = iso(b.x, b.y+b.h/2);
-  ctx.fillStyle='#8a5a2b'; roundRect(dc.sx-16, dc.sy-58, 32, 52, 6); ctx.fill();
-  ctx.fillStyle='#6d4520'; roundRect(dc.sx-12, dc.sy-53, 24, 47, 5); ctx.fill();
-  // gable roof
-  const along = b.w>=b.h;
-  let R1,R2,f1,f2;
-  if(along){
-    R1=[iso(b.x,b.y+b.h/2).sx, iso(b.x,b.y+b.h/2).sy-H-RH];
-    R2=[iso(b.x+b.w,b.y+b.h/2).sx, iso(b.x+b.w,b.y+b.h/2).sy-H-RH];
-    f1=[up(N,H),up(E,H),R2,R1]; f2=[up(W,H),up(S,H),R2,R1];
-  } else {
-    R1=[iso(b.x+b.w/2,b.y).sx, iso(b.x+b.w/2,b.y).sy-H-RH];
-    R2=[iso(b.x+b.w/2,b.y+b.h).sx, iso(b.x+b.w/2,b.y+b.h).sy-H-RH];
-    f1=[up(N,H),up(W,H),R2,R1]; f2=[up(E,H),up(S,H),R2,R1];
-  }
-  poly(f1, shade(s.roof,-28), '#00000022', 2);
-  poly(f2, s.roof, '#00000022', 2);
-  ctx.globalAlpha=.16; poly(f2.map(p=>p), '#fff'); ctx.globalAlpha=1;
-  // what makes each building itself
   const mid = iso(b.x+b.w/2, b.y+b.h/2);
+
+  ctx.globalAlpha=.25;
+  poly([[N.sx,N.sy+6],[E.sx+8,E.sy+6],[S.sx,S.sy+8],[W.sx-8,W.sy+6]],'#000');
+  ctx.globalAlpha=1;
+
+  // ---- walls (only the two the camera can see)
+  poly([up(W,0),up(S,0),up(S,H),up(W,H)], wallS);
+  poly([up(E,0),up(S,0),up(S,H),up(E,H)], wallE);
+  if(shape==='mill'){                                // stone footing
+    poly(faceQuad(W,S,H,0,1,0,0.13), '#c3b8a2');
+    poly(faceQuad(E,S,H,0,1,0,0.13), '#ada291');
+  }
+
+  /* Roof and gable. The eaves overhang, but the GABLE ENDS must not: a roof
+     that oversails the end wall straddles the gable plane, and whichever way
+     it is ordered it buries the triangle. Ends flush, then the triangle is
+     drawn over the roof, then a barge board along the edge.               */
+  const along = b.w >= b.h;
+  let R1, R2, f1, f2, gTri;
+  if(along){
+    const eN=iso(b.x,b.y-OV), eE=iso(b.x+b.w,b.y-OV),
+          eS=iso(b.x+b.w,b.y+b.h+OV), eW=iso(b.x,b.y+b.h+OV);
+    const gw=iso(b.x,b.y+b.h/2), ge=iso(b.x+b.w,b.y+b.h/2);
+    R1=[gw.sx, gw.sy-H-RH]; R2=[ge.sx, ge.sy-H-RH];
+    f1=[up(eN,H),up(eE,H),R2,R1]; f2=[up(eW,H),up(eS,H),R2,R1];
+    gTri=[up(E,H), up(S,H), R2];
+  } else {
+    const eN=iso(b.x-OV,b.y), eE=iso(b.x+b.w+OV,b.y),
+          eS=iso(b.x+b.w+OV,b.y+b.h), eW=iso(b.x-OV,b.y+b.h);
+    const gn=iso(b.x+b.w/2,b.y), gs=iso(b.x+b.w/2,b.y+b.h);
+    R1=[gn.sx, gn.sy-H-RH]; R2=[gs.sx, gs.sy-H-RH];
+    f1=[up(eN,H),up(eW,H),R2,R1]; f2=[up(eE,H),up(eS,H),R2,R1];
+    gTri=[up(W,H), up(S,H), R2];
+  }
+
+  // ---- doors and windows, flat on the walls
+  if(shape === 'shed'){                              // coop: mostly door
+    drawDoor(E,S,H, 0.52, Math.min(0.32, 1.5/b.h), 0.76, '#7c4f26');
+    const hatch = facePt(W,S,H, 0.5, 0.82);          // pop-hole for the hens
+    ctx.fillStyle='#8fb7d8'; ctx.beginPath(); ctx.arc(hatch[0],hatch[1],7,0,6.29); ctx.fill();
+    ctx.strokeStyle='#fdf7e6'; ctx.lineWidth=2.5; ctx.stroke();
+  } else if(shape === 'mill'){
+    drawDoor(E,S,H, 0.5, 0.6/b.h, 0.46, '#7c4f26');
+    drawWindow(W,S,H, 0.28, 0.62, 0.36/b.w, 0.085);
+    drawWindow(W,S,H, 0.72, 0.62, 0.36/b.w, 0.085);
+    drawWindow(W,S,H, 0.5,  0.30, 0.36/b.w, 0.085);
+  } else {
+    drawDoor(E,S,H, 0.5, 0.55/b.h, 0.62);
+    if(b.h >= 5){
+      drawWindow(E,S,H, 0.17, 0.62, 0.4/b.h, 0.115);
+      drawWindow(E,S,H, 0.83, 0.62, 0.4/b.h, 0.115);
+    }
+    drawWindow(W,S,H, 0.24, 0.62, 0.42/b.w, 0.115);
+    drawWindow(W,S,H, 0.5,  0.62, 0.42/b.w, 0.115);
+    drawWindow(W,S,H, 0.76, 0.62, 0.42/b.w, 0.115);
+  }
+
+  // ---- roof last, so the eaves overhang everything below
+  poly(f1, shade(s.roof,-30), '#00000022', 2);
+  poly(f2, s.roof, '#00000022', 2);
+  ctx.strokeStyle = shade(s.roof,-46); ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(R1[0],R1[1]); ctx.lineTo(R2[0],R2[1]); ctx.stroke();
+  poly(gTri, shade(wallE, 12), '#00000018', 2);                 // the gable itself
+  ctx.strokeStyle = shade(s.roof,-14); ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(gTri[0][0],gTri[0][1]); ctx.lineTo(gTri[2][0],gTri[2][1]);
+  ctx.lineTo(gTri[1][0],gTri[1][1]); ctx.stroke();              // barge boards
+
   const topY = mid.sy - H - RH;
   if(s.motif==='sails'){
-    const cx = mid.sx, cy = topY - 34, ang = G.t*0.85;
+    // mounted on the gable end, just under the roof apex
+    let gApex, gBase;
+    if(along){
+      const ge = iso(b.x+b.w, b.y+b.h/2);
+      gApex = [ge.sx, ge.sy-H-RH];
+      gBase = [(E.sx+S.sx)/2, (E.sy+S.sy)/2 - H];
+    } else {
+      const gs = iso(b.x+b.w/2, b.y+b.h);
+      gApex = [gs.sx, gs.sy-H-RH];
+      gBase = [(W.sx+S.sx)/2, (W.sy+S.sy)/2 - H];
+    }
+    const cx = lerp(gBase[0], gApex[0], 0.66), cy = lerp(gBase[1], gApex[1], 0.66);
+    const ang = G.t*0.85;
     for(let i=0;i<4;i++){
       const a1 = ang + i*Math.PI/2;
       const ex = cx + Math.cos(a1)*62, ey = cy + Math.sin(a1)*62;
@@ -1472,9 +1560,17 @@ function drawBuilding(s){
     ctx.fillStyle='#4a3418'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, 6.29); ctx.fill();
     ctx.fillStyle='#8a6a3c'; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.29); ctx.fill();
   } else if(s.motif==='silo'){
-    const q = iso(b.x+b.w, b.y+b.h*0.25);
-    ctx.fillStyle='#cfd6da'; roundRect(q.sx-2, q.sy-H-58, 26, 82, 6); ctx.fill();
-    ctx.fillStyle='#9fb0ba'; roundRect(q.sx-2, q.sy-H-58, 26, 16, 6); ctx.fill();
+    const q = iso(b.x+b.w+0.45, b.y+b.h*0.62);        // stands on the ground beside the barn
+    const sh = H + 52, sw = 30;
+    ctx.globalAlpha=.22; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(q.sx, q.sy, sw*0.62, sw*0.3, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+    ctx.fillStyle='#cfd6da'; roundRect(q.sx-sw/2, q.sy-sh, sw, sh, 5); ctx.fill();
+    ctx.fillStyle='#b9c3c9'; roundRect(q.sx+2, q.sy-sh, sw/2-2, sh, 5); ctx.fill();
+    ctx.strokeStyle='#aab6bd'; ctx.lineWidth=2;
+    for(let i=1;i<5;i++){ const yy=q.sy-sh*i/5;
+      ctx.beginPath(); ctx.moveTo(q.sx-sw/2+1, yy); ctx.lineTo(q.sx+sw/2-1, yy); ctx.stroke(); }
+    ctx.fillStyle='#8d9aa2';
+    ctx.beginPath(); ctx.ellipse(q.sx, q.sy-sh, sw/2, 11, 0, Math.PI, 0); ctx.fill();
   } else if(s.motif==='chimney'){
     const q = iso(b.x+b.w*0.3, b.y+b.h*0.3);
     ctx.fillStyle='#8d5a3c'; ctx.fillRect(q.sx-8, topY-26, 17, 40);
@@ -1489,7 +1585,7 @@ function drawBuilding(s){
   } else if(s.motif==='perch'){
     const q = iso(b.x+b.w*0.5, b.y+b.h*0.5);
     ctx.strokeStyle='#6b4a28'; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.moveTo(q.sx, topY+4); ctx.lineTo(q.sx, topY-22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(q.sx, topY+2); ctx.lineTo(q.sx, topY-20); ctx.stroke();
     ctx.fillStyle='#d9483f';
     poly([[q.sx-2,topY-30],[q.sx+18,topY-24],[q.sx-2,topY-18]], '#d9483f');
     ctx.fillStyle='#4a3418'; ctx.beginPath(); ctx.arc(q.sx-2, topY-24, 5, 0, 6.29); ctx.fill();
@@ -1726,11 +1822,12 @@ function drawPerson(a, sx, sy, tint, opts){
       idx++;
     }
   }
-  if(total>SHOW){
+  if(total>SHOW && a.hand){
+    // farmhands only: their whole load, matching what the HUD shows for you
     const ty = sy-62+bob-SHOW*STEP-6;
     ctx.font='900 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#00000099'; ctx.lineWidth=4;
-    ctx.strokeText('+'+(total-SHOW), sx, ty); ctx.fillText('+'+(total-SHOW), sx, ty);
+    ctx.strokeText(total, sx, ty); ctx.fillText(total, sx, ty);
   }
   if(napping){
     ctx.restore();

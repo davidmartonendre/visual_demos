@@ -10,6 +10,15 @@ deliberately.
 - Rendering is canvas 2D with a hand-rolled isometric projection
   (`iso()`, `worldToScreen()`); the world is in tile units and screen work happens
   in iso-space pixels inside one `ctx.translate/scale` transform.
+- Buildings are drawn from `drawBuilding()`. Doors and windows are placed in
+  face space via `facePt`/`faceQuad` — two ground corners plus the wall height —
+  so they sit flat on a wall instead of floating in front of it. Doors go on the
+  east face, which is the one the trays stand against.
+- Roofs overhang the eaves but must stay flush at the gable ends. A roof that
+  oversails the end wall straddles the gable plane, and no draw order shows the
+  gable triangle correctly; with flush ends the triangle can simply be drawn over
+  the roof, with a barge board along the edge. `shape` picks the massing:
+  `house`, `shed` (low, mostly door) or `mill` (tall, blades on the gable).
 - Entities are depth-sorted by `x + y`. Anything with height (buildings) will
   occlude whatever sits at a *smaller* `x + y`, which is why the farm buildings are
   on the west/far side and the player's yard is east/near. Keep it that way.
