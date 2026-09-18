@@ -87,10 +87,15 @@
     background:linear-gradient(#fff8e6,#f2e3bf);color:#4a3418;box-shadow:0 14px 0 #c9a96a,0 22px 40px rgba(0,0,0,.5)}
   #card h2{font-size:27px;margin-bottom:10px;color:#a8560f}
   #card p{font-size:17px;line-height:1.5;font-weight:700;margin-bottom:8px}
-  #card .ok{margin-top:16px;border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:20px;color:#fff;
-    padding:11px 30px 14px;border-radius:15px;background:linear-gradient(#7ed34f,#4da32c);
+  #card [hidden]{display:none!important}
+  .mbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  #card .ok{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:17px;color:#fff;
+    padding:11px 17px 14px;border-radius:14px;background:linear-gradient(#7ed34f,#4da32c);
     box-shadow:0 5px 0 #34781d;text-shadow:0 2px 0 rgba(0,0,0,.25)}
-  #card .ok:active{transform:translateY(4px);box-shadow:0 1px 0 #34781d}
+  #card .ok.cancel{background:linear-gradient(#efe6d0,#d7c9a8);color:#5c4526;
+    box-shadow:0 5px 0 #b0a084;text-shadow:none}
+  #card .ok.danger{background:linear-gradient(#f2806d,#d24430);box-shadow:0 5px 0 #9b2f1f}
+  #card .ok:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
   #card .sub{font-size:14px;opacity:.75;font-weight:700}
 </style>
 </head>
@@ -120,7 +125,10 @@
   <div id="modal"><div id="card">
     <h2 id="m-title"></h2>
     <div id="m-body"></div>
-    <button class="ok" id="m-ok">OK</button>
+    <div class="mbtns">
+      <button class="ok cancel" id="m-cancel" hidden>CANCEL</button>
+      <button class="ok" id="m-ok">OK</button>
+    </div>
   </div></div>
 </div>
 <script>
@@ -2040,7 +2048,7 @@ function openSaveFile(){
     rd.onload = ()=>{
       const err = importSave(String(rd.result));
       if(err) say(err, false);
-      else { el('modal').classList.remove('on'); sfx.buy();
+      else { closeModal(); sfx.buy();
              hint('loaded','Farm loaded \u2014 level '+G.level+', $'+fmt(G.coins)+' in hand', true); }
     };
     rd.onerror = ()=> say('Could not read that file.', false);
@@ -2049,7 +2057,7 @@ function openSaveFile(){
   el('s-paste').onclick = ()=>{
     const err = importSave(box.value);
     if(err) say(err, false);
-    else { el('modal').classList.remove('on'); sfx.buy();
+    else { closeModal(); sfx.buy();
            hint('loaded','Farm loaded \u2014 level '+G.level+', $'+fmt(G.coins)+' in hand', true); }
   };
 }
@@ -2064,14 +2072,27 @@ function openJournal(){
   modal('The Hollowbrook Journal', html, 'CLOSE');
 }
 
-function modal(title, html, btn){
+let modalConfirm = null;
+function closeModal(){ el('modal').classList.remove('on'); modalConfirm = null; }
+function modal(title, html, btn, opts){
+  opts = opts || {};
   el('m-title').textContent = title;
   el('m-body').innerHTML = html;
-  el('m-ok').textContent = btn||'OK';
+  const ok = el('m-ok'), cancel = el('m-cancel');
+  ok.textContent = btn || 'OK';
+  ok.classList.toggle('danger', !!opts.danger);
+  cancel.hidden = !opts.cancel;
+  if(opts.cancel) cancel.textContent = opts.cancel;
+  modalConfirm = opts.onConfirm || null;      // never survives the dialog that set it
   el('modal').classList.add('on');
 }
-el('m-ok').onclick = ()=>{ el('modal').classList.remove('on'); if(pendingReset){ pendingReset=false; doReset(); } };
-let pendingReset = false;
+el('m-ok').onclick = ()=>{ const fn = modalConfirm; closeModal(); if(fn) fn(); };
+el('m-cancel').onclick = closeModal;
+// tapping the dimmed area or pressing Escape backs out, never confirms
+el('modal').onclick = e=>{ if(e.target === el('modal')) closeModal(); };
+addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && el('modal').classList.contains('on')) closeModal();
+});
 
 function winModal(){
   modal('HARVEST FESTIVAL',
@@ -2088,8 +2109,10 @@ el('b-sound').onclick = ()=>{
   save();
 };
 el('b-reset').onclick = ()=>{
-  pendingReset = true;
-  modal('Start a fresh farm?', '<p>This wipes your coins, upgrades and farmhands.</p>', 'WIPE IT');
+  modal('Start a fresh farm?',
+    '<p>This wipes your coins, upgrades, farmhands and story.</p>' +
+    '<p class="sub">There is no undo \u2014 take a copy with \u{1F4BE} first if you might want it back.</p>',
+    'WIPE IT', { cancel:'KEEP MY FARM', danger:true, onConfirm:doReset });
 };
 function doReset(){
   try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
