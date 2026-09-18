@@ -65,6 +65,21 @@
   #jrn .e span{font-size:13.5px;font-weight:700;line-height:1.45;display:block}
   #jrn .lock{opacity:.45;font-style:italic}
 
+  /* ---------- save panel ---------- */
+  #savebox{text-align:left}
+  #savebox p{font-size:13.5px;margin-bottom:9px}
+  #savetxt{width:100%;height:92px;resize:vertical;border-radius:10px;padding:8px 10px;
+    border:2px solid #c9a96a;background:#fffdf5;color:#5c4526;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;line-height:1.4}
+  .sbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .sbtn{flex:1 1 calc(50% - 8px);border:none;cursor:pointer;font-family:inherit;font-weight:900;
+    font-size:14px;color:#fff;padding:9px 10px 11px;border-radius:11px;
+    background:linear-gradient(#7aa7d8,#4a7cb5);box-shadow:0 4px 0 #35608f;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .sbtn.go{background:linear-gradient(#7ed34f,#4da32c);box-shadow:0 4px 0 #34781d}
+  .sbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #35608f}
+  #savemsg{margin-top:9px;font-size:13px;font-weight:800;min-height:17px}
+  #savemsg.s-ok{color:#2e8b3f} #savemsg.s-bad{color:#b23b3b}
+
   /* ---------- modal ---------- */
   #modal{position:absolute;inset:0;z-index:9;display:none;place-items:center;background:rgba(8,14,6,.72);padding:24px}
   #modal.on{display:grid}
@@ -96,6 +111,7 @@
     <div id="btmrow">
       <button class="round" id="b-sound">&#128266;</button>
       <button class="round" id="b-journal" title="Journal">&#128214;</button>
+      <button class="round" id="b-save" title="Save file">&#128190;</button>
       <button class="round" id="b-reset" title="Restart farm">&#8635;</button>
       <div id="lvltxt" class="pop">FARM LEVEL 1</div>
     </div>
@@ -390,15 +406,26 @@ function serveStand(a, dt){
 
 /* -------------------------------------------------------------- persistence */
 const SAVE_KEY = 'harvest-hero-v1';
-function save(){
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({
+
+/* A save is a plain object. localStorage and the save file carry the same
+   thing, so anything that round-trips through one round-trips through both. */
+function saveData(){
+  return {
+    game:'harvest-hero', format:2,
+    savedAt:new Date().toISOString(), level:G.level,
     coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
     sound:G.sound, seenHint:G.seenHint, won:G.won,
-    story:G.story, journal:G.journal, orders:G.orders })); }catch(e){}
+    story:G.story, journal:G.journal, orders:G.orders };
+}
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(saveData())); }catch(e){}
 }
 function load(){
   let d=null; try{ d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){}
   if(!d) return;
+  applySave(d);
+}
+function applySave(d){
   G.coins=d.coins|0; G.earned=d.earned|0; G.hands=d.hands|0;
   Object.assign(G.up, d.up||{}); Object.assign(G.paid, d.paid||{});
   G.sound = d.sound!==false; G.seenHint = d.seenHint||{}; G.won=!!d.won;
@@ -413,6 +440,39 @@ function load(){
   G.orders = Array.isArray(d.orders) && d.orders.length ? d.orders : [];
   refreshOrders();
   for(let i=0;i<G.hands;i++) actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true));
+}
+
+/* ---- save files -------------------------------------------------------
+   Download is blocked in some sandboxed embeds, so the same text is always
+   shown for copy/paste as well; either route restores the same farm.      */
+function saveFileName(){
+  return 'harvest-hero-level-' + G.level + '-' + new Date().toISOString().slice(0,10) + '.json';
+}
+function exportSave(){
+  save();
+  const text = JSON.stringify(saveData(), null, 2);
+  try{
+    const url = URL.createObjectURL(new Blob([text], {type:'application/json'}));
+    const a = document.createElement('a');
+    a.href = url; a.download = saveFileName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    return true;
+  }catch(e){ return false; }
+}
+function importSave(text){
+  let d;
+  try{ d = JSON.parse(text); }
+  catch(e){ return 'That is not valid JSON \u2014 check the whole file was copied.'; }
+  if(!d || typeof d !== 'object' || Array.isArray(d)) return 'That file does not contain a save.';
+  if(d.coins === undefined && !d.up) return 'That does not look like a Harvest Hero save.';
+  const keepSound = G.sound;
+  resetGame();
+  applySave(d);
+  G.sound = keepSound;
+  const q = iso(player().x, player().y); cam.x = q.sx; cam.y = q.sy;
+  buildPills(); syncHUD(); save();
+  return null;
 }
 
 /* -------------------------------------------------------------- audio */
@@ -1739,6 +1799,65 @@ function showChapter(c){
   sfx.levelup();
 }
 
+function openSaveFile(){
+  save();
+  const text = JSON.stringify(saveData(), null, 2);
+  modal('Your farm, as a file',
+    '<div id="savebox">'+
+      '<p>Download it to keep a backup, move it to another browser or device, '+
+      'or paste one back in below.</p>'+
+      '<textarea id="savetxt" spellcheck="false"></textarea>'+
+      '<div class="sbtns">'+
+        '<button class="sbtn" id="s-dl">DOWNLOAD</button>'+
+        '<button class="sbtn" id="s-copy">COPY</button>'+
+        '<button class="sbtn" id="s-file">LOAD FILE</button>'+
+        '<button class="sbtn go" id="s-paste">LOAD PASTED</button>'+
+      '</div>'+
+      '<div id="savemsg"></div>'+
+      '<input type="file" id="s-input" accept="application/json,.json" hidden>'+
+    '</div>', 'CLOSE');
+
+  const box = el('savetxt'); box.value = text;
+  const msg = el('savemsg');
+  const say = (t, ok)=>{ msg.textContent = t; msg.className = ok ? 's-ok' : 's-bad'; };
+
+  el('s-dl').onclick = ()=>{
+    const name = saveFileName();
+    // some embeds block downloads silently, so word this so it is true either way
+    say(exportSave()
+      ? 'Sent ' + name + ' to your downloads. Nothing there? This page blocks downloads \u2014 use COPY.'
+      : 'This page cannot start downloads \u2014 use COPY instead.', true);
+  };
+  el('s-copy').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(box.value); say('Copied to the clipboard.', true); }
+    catch(e){
+      box.focus(); box.select();
+      try{ document.execCommand('copy'); say('Copied to the clipboard.', true); }
+      catch(e2){ say('Copy blocked \u2014 select the text and copy it by hand.', false); }
+    }
+  };
+  el('s-file').onclick = ()=> el('s-input').click();
+  el('s-input').onchange = ev=>{
+    const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{
+      const err = importSave(String(rd.result));
+      if(err) say(err, false);
+      else { el('modal').classList.remove('on'); sfx.buy();
+             hint('loaded','Farm loaded \u2014 level '+G.level+', $'+fmt(G.coins)+' in hand', true); }
+    };
+    rd.onerror = ()=> say('Could not read that file.', false);
+    rd.readAsText(f);
+  };
+  el('s-paste').onclick = ()=>{
+    const err = importSave(box.value);
+    if(err) say(err, false);
+    else { el('modal').classList.remove('on'); sfx.buy();
+           hint('loaded','Farm loaded \u2014 level '+G.level+', $'+fmt(G.coins)+' in hand', true); }
+  };
+}
+
 function openJournal(){
   let html = '<div id="jrn">';
   for(const c of STORY){
@@ -1766,6 +1885,7 @@ function winModal(){
 }
 
 el('b-journal').onclick = openJournal;
+el('b-save').onclick = openSaveFile;
 el('b-sound').onclick = ()=>{
   G.sound = !G.sound;
   el('b-sound').innerHTML = G.sound ? '&#128266;' : '&#128263;';

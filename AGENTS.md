@@ -33,5 +33,10 @@ deliberately.
   and the last items never arrive.
 - Story chapters live in `STORY`; each has a `when()` predicate polled by
   `checkStory()`, fires once, and is recorded in `G.story` / the journal.
-- Save migration matters: `load()` has to cope with saves written by older builds
-  (e.g. a bakery that predates the windmill now feeding it).
+- Save migration matters: `applySave()` has to cope with saves written by older
+  builds (e.g. a bakery that predates the windmill now feeding it).
+- There is one save shape: `saveData()` builds it, `applySave()` restores it, and
+  localStorage and the downloadable save file both carry exactly that. Add a field
+  in `saveData()` and read it in `applySave()` — never write a second serialiser.
+- Imported saves are untrusted input: `importSave()` parses, shape-checks and only
+  then resets the world, so a bad paste can never leave a half-applied farm.

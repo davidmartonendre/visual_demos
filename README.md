@@ -70,7 +70,23 @@ it's paid off.
 - **Artisans** — every workshop makes more per batch, up to 8 at a time
 - Plus the six buildings and the orchard themselves
 
-Your farm saves to `localStorage` automatically. 📖 opens the journal, ↺ wipes it.
+Your farm saves to `localStorage` automatically every few seconds. The bottom-left
+buttons are 🔊 sound, 📖 the journal, 💾 the save file and ↺ wipe-and-restart.
+
+### Save files
+
+💾 opens your whole farm as a JSON file you can **download**, or **copy** as text.
+Load one back with **LOAD FILE** or by pasting it in — which is how you move a farm to
+another browser, another device, or back after clearing site data. Loading validates
+the file first and refuses anything that isn't a save, leaving the current farm alone.
+
+The file is the same object the game keeps in `localStorage` (`saveData()` builds it,
+`applySave()` restores it), so it is readable and hand-editable if you want to cheat:
+
+```json
+{ "game": "harvest-hero", "format": 2, "savedAt": "…", "level": 12,
+  "coins": 7777, "earned": 4242, "up": { "bag": 9, "windmill": 1, … }, … }
+```
 
 ## Hosting it
 
