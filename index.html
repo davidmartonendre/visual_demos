@@ -62,7 +62,7 @@
   #b-bag:active{transform:translateX(-50%) translateY(4px);box-shadow:0 1px 0 #c9942a}
   #bag{text-align:left;max-height:56vh;overflow-y:auto}
   #bag .cq{font-size:12.5px;font-weight:800;color:#8a7b63}
-  .crow.till{border-bottom:none;margin-top:4px;padding-top:11px;border-top:2px solid rgba(122,79,29,.25)}
+  .crow.sep{border-bottom:none;margin-top:4px;padding-top:11px;border-top:2px solid rgba(122,79,29,.25)}
   #bagmsg{margin-top:8px;font-size:13px;font-weight:800;color:#b23b3b;min-height:16px}
 
   /* ---------- tutorial / toast ---------- */
@@ -462,7 +462,6 @@ function resetGame(){
   }
   actors  = [ newActor(16.2, 11.0, false) ];
   flyers = []; pops = []; puffs = []; coinFx = []; customers = [];
-  stockPend = emptyBag();
   for(let i=0;i<7;i++) customers.push(newCustomer(i));
   refreshOrders();
   shake = 0;
@@ -540,31 +539,18 @@ function updateCustomers(dt){
 function hasKeeper(){ return G.up.keeper > 0; }
 function stockTotal(){ let n=0; for(const k of ITEM_ORDER) n += G.stock[k]; return n; }
 
-/* Parcels already thrown at the stall but not yet landed. Stock only goes up
-   in the flyer's callback, so without this the loop keeps unloading against a
-   figure that is seconds out of date and sails past the cap -- the same trap
-   the trays avoid with their own pend counters. Not saved: it is always empty
-   between sessions, because flyers do not survive a reload.               */
-let stockPend = emptyBag();
-const stockRoom = k => STOCK_CAP - G.stock[k] - stockPend[k];
+/* Stock moves in one piece from the bag panel, so there is never an amount in
+   the air to reserve against. It used to arrive as a drip of flyers and needed
+   a `stockPend` counter, because a loop that reads the stored figure is
+   seconds out of date and unloads past the cap. The trays still work that way
+   and still keep their own `s.pend`. */
+const stockRoom = k => STOCK_CAP - G.stock[k];
 
-/* With a keeper hired the stand pad becomes a bulk drop-off: you unload, they sell. */
-function stockStand(a, dt){
-  if(!inRect(a, STAND) || carried(a) <= 0) return false;
-  hint('stockit','Leave goods here \u2014 the keeper sells them off for you');
-  const step0 = flowStep(actorCap(a));
-  let did = false;
-  while(a.ioT >= IO_INTERVAL){
-    const k = ITEM_ORDER.find(k => a.carry[k] > 0 && stockRoom(k) > 0);
-    if(!k) break;
-    a.ioT -= IO_INTERVAL;
-    const step = Math.min(a.carry[k], Math.max(1, Math.min(step0, Math.ceil(a.carry[k]/8))), stockRoom(k));
-    a.carry[k] -= step; stockPend[k] += step;
-    const dst = { x: STALL.x + STALL.w/2, y: STALL.y + STALL.h/2 };
-    itemFlyer(k, {x:a.x, y:a.y}, dst, (n=>()=>{ stockPend[k] -= n; G.stock[k] += n; })(step));
-    did = true;
-  }
-  return did;
+/* A served villager takes their goods and goes. */
+function leaveHappy(c){
+  c.state='leave'; c.slot=-1; c.happy=1.4;
+  for(let i=0;i<10;i++) puffs.push({x:c.x,y:c.y,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
+    t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
 }
 
 /* The keeper works the queue from stock, at the same over-market price. */
@@ -584,42 +570,21 @@ function keeperServe(dt){
       pops.push({x:cx, y:cy, z:1.5, t:0, txt:'+'+fmt(pay), col:'#7dff8d'});
       checkLevel();
     });
-    if(c.n <= 0){
-      c.state='leave'; c.slot=-1; c.happy=1.4;
-      for(let i=0;i<8;i++) puffs.push({x:cx,y:cy,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
-        t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
-    }
+    if(c.n <= 0) leaveHappy(c);
   }
 }
 
-/* serve the front of the queue — player only, the farmhands never touch it */
-function serveStand(a, dt){
-  if(hasKeeper()) return stockStand(a, dt);     // the keeper does the selling now
-  if(!inRect(a, STAND)) return false;
-  const waiting = customers.filter(c=>c.state==='wait' && c.n>0);
-  if(waiting.length) hint('stand','Villagers pay '+Math.round((STAND_BONUS-1)*100)+'% over market for what they ask for');
-  let served = false;
-  while(a.ioT >= IO_INTERVAL){
-    const c = waiting.find(c=>c.n>0 && a.carry[c.want]>0);
-    if(!c) break;
-    a.ioT -= IO_INTERVAL;
-    const step = Math.min(a.carry[c.want], c.n, flowStep(c.n));
-    a.carry[c.want] -= step; c.n -= step;
-    served = true;
-    const pay = standPrice(c.want)*step, cx = c.x, cy = c.y;
-    itemFlyer(c.want, {x:a.x,y:a.y}, {x:cx,y:cy}, ()=>{
-      G.coins += pay; G.earned += pay;
-      spawnCoinFx(); sfx.coin();
-      pops.push({x:cx, y:cy, z:1.5, t:0, txt:'+'+pay, col:'#7dff8d'});
-      checkLevel();
-    });
-    if(c.n<=0){
-      c.state='leave'; c.slot=-1; c.happy=1.4;
-      for(let i=0;i<10;i++) puffs.push({x:cx,y:cy,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
-        t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
-    }
-  }
-  return served;
+/* Standing at the stand says what can be done here and moves nothing. The
+   pad used to serve the queue on contact, and with a keeper hired it emptied
+   the whole bag into the stall -- walking past cost you the load. The player
+   hands goods over from the bag panel now; the farmhands never touch it. */
+function serveStand(a){
+  if(!inRect(a, STAND) || carried(a) <= 0) return false;
+  if(hasKeeper()) hint('stockit','Tap INVENTORY \u2014 the keeper sells whatever you leave');
+  else if(customers.some(c=>c.state==='wait' && c.n>0))
+    hint('stand','Tap INVENTORY to serve the queue \u2014 they pay '+
+                 Math.round((STAND_BONUS-1)*100)+'% over market for what they ask for');
+  return false;
 }
 
 /* -------------------------------------------------------------- persistence */
@@ -797,7 +762,6 @@ function applySave(d){
   G.handLazy = Array.isArray(d.handLazy) ? d.handLazy.slice() : [];
   G.pickerLazy = Array.isArray(d.pickerLazy) ? d.pickerLazy.slice() : [];
   G.stock = Object.assign(emptyBag(), d.stock || {});
-  stockPend = emptyBag();          // nothing is in the air across a load
   G.till = d.till | 0;
   G.cos = d.cos || {}; G.wear = d.wear || {};
 
@@ -1049,7 +1013,7 @@ function tryStations(a, dt){
   a.ioT = (a.ioT||0) + dt;
   if(!a.hand && bagOpen) return;                  // the panel is doing the carrying
   if(!a.hand && inRect(a, TILL_PAD)) collectTill();
-  if(!a.hand && serveStand(a, dt)) return;
+  if(!a.hand) serveStand(a);
   if(!a.hand && serveBoard(a, dt)) return;
   for(const s of STATIONS){
     if(!s.unlocked) continue;
@@ -1057,7 +1021,15 @@ function tryStations(a, dt){
       if(!inRect(a, tr)) continue;
 
       if(tr.mode==='sell'){
-        if(!a.hand) collectTill();
+        if(!a.hand){
+          collectTill();
+          /* Walking over the counter used to sell the whole bag, priciest
+             first, which is the accident the bag panel exists to prevent.
+             The player sells from there now, one good at a time. */
+          if(carried(a) > 0) hint('sellpanel','Tap INVENTORY \u2014 you choose what to sell');
+          else hint('pad','Coins pay for UPGRADES \u2014 stand on a glowing pad');
+          return;
+        }
         if(carried(a)<=0) continue;
         const step0 = flowStep(actorCap(a));   // constant, so the stack always drains
         while(a.ioT >= IO_INTERVAL && carried(a)>0){
@@ -1073,22 +1045,11 @@ function tryStations(a, dt){
           const step = Math.max(1, Math.min(a.carry[it], step0, Math.ceil(a.carry[it]/8)));
           a.carry[it] -= step;
           const price = ITEMS[it].price * step;
-          const p = {x:a.x, y:a.y};
-          const byHand = a.hand;
-          itemFlyer(it, p, rectCenter({x:s.b.x,y:s.b.y,w:s.b.w,h:s.b.h}), ()=>{
-            if(byHand){
-              // a farmhand's takings wait in the till; constant coin flashes
-              // for someone else's work is just noise
-              G.till += price;
-            } else {
-              G.coins += price; G.earned += price;
-              spawnCoinFx(); sfx.coin();
-              pops.push({x:a.x,y:a.y,z:1.3,t:0,txt:'+'+fmt(price),col:'#7dff8d'});
-              checkLevel();
-            }
-          });
+          // only a farmhand gets this far, and its takings wait in the till:
+          // constant coin flashes for someone else's work are just noise
+          itemFlyer(it, {x:a.x, y:a.y}, rectCenter({x:s.b.x,y:s.b.y,w:s.b.w,h:s.b.h}),
+                    ()=>{ G.till += price; });
         }
-        hint('pad','Coins pay for UPGRADES — stand on a glowing pad');
         return;
       }
 
@@ -1585,6 +1546,7 @@ function checkLevel(){
     const r = RANKS.find(x => x.lv === G.level);
     if(r) showBanner(r.name, r.line, 'LEVEL '+G.level);
     if(G.level>=15 && !G.won){ G.won=true; winModal(); }
+    syncHUD();          // the bar and the title move with the level, not a frame later
     save();
   }
 }
@@ -2871,13 +2833,21 @@ function bagSpot(){
   return null;
 }
 
-/* Sell one good outright. Never assume the stack is there: the market bug
-   that paid wheat rates for cheese started exactly that way. */
-function sellFromBag(k){
-  const a = player(), have = a.carry[k] || 0;
-  if(have <= 0) return 'There is none of that in the bag.';
-  a.carry[k] = 0;
-  const pay = ITEMS[k].price * have;
+/* Sell at the counter. One good or the whole bag take the same route, so the
+   payout, the effects and the level check cannot drift apart. Never assume a
+   stack is there: the market bug that paid wheat rates for cheese began that
+   way. */
+function sellBag(keys){
+  const a = player();
+  const counter = rectCenter(station('market').b);
+  let pay = 0, sold = 0;
+  for(const k of keys){
+    const have = a.carry[k] || 0;
+    if(have <= 0) continue;
+    a.carry[k] = 0; sold += have; pay += ITEMS[k].price * have;
+    itemFlyer(k, {x:a.x, y:a.y}, counter, null);   // paid already; this is the picture
+  }
+  if(!sold) return 'There is none of that in the bag.';
   G.coins += pay; G.earned += pay;
   sfx.coin(); spawnCoinFx();
   pops.push({ x:a.x, y:a.y, z:1.3, t:0, txt:'+'+fmt(pay), col:'#7dff8d' });
@@ -2885,29 +2855,34 @@ function sellFromBag(k){
   return null;
 }
 
-/* Hand one good to the stand: into stock if a keeper minds it, otherwise
-   straight to whoever in the queue asked for it. */
-function standFromBag(k){
-  const a = player(), have = a.carry[k] || 0;
-  if(have <= 0) return 'There is none of that in the bag.';
+/* Hand goods to the stand: into stock if a keeper minds it, otherwise
+   straight to whoever in the queue asked for them. */
+function standBag(keys){
+  const a = player();
   if(hasKeeper()){
-    const room = stockRoom(k);
-    if(room <= 0) return 'The stall is already full of ' + ITEMS[k].label.toLowerCase() + '.';
-    const step = Math.min(have, room);
-    a.carry[k] -= step; G.stock[k] += step;
+    let moved = 0, full = false;
+    for(const k of keys){
+      const have = a.carry[k] || 0;
+      if(have <= 0) continue;
+      const room = stockRoom(k);
+      if(room <= 0){ full = true; continue; }
+      const step = Math.min(have, room);
+      a.carry[k] -= step; G.stock[k] += step; moved += step;
+      itemFlyer(k, {x:a.x, y:a.y}, rectCenter(STALL), null);
+    }
+    if(!moved) return full ? 'The stall is already full of that.' : 'There is none of that in the bag.';
     sfx.pick(); save();
-    pops.push({ x:a.x, y:a.y, z:1.3, t:0, txt:'+'+step+' in stock', col:'#8ef07a' });
+    pops.push({ x:a.x, y:a.y, z:1.3, t:0, txt:'+'+fmt(moved)+' in stock', col:'#8ef07a' });
     return null;
   }
   let sold = 0, pay = 0;
-  for(const c of customers){
-    if(c.state!=='wait' || c.n<=0 || c.want!==k || a.carry[k]<=0) continue;
-    const step = Math.min(a.carry[k], c.n);
-    a.carry[k] -= step; c.n -= step; sold += step; pay += standPrice(k)*step;
-    if(c.n <= 0){
-      c.state='leave'; c.slot=-1; c.happy=1.4;
-      for(let i=0;i<10;i++) puffs.push({x:c.x,y:c.y,z:1.0,vx:rnd(-1.5,1.5),vy:rnd(-1.5,1.5),vz:rnd(1.5,3.5),
-        t:0,life:rnd(.4,.8),col:['#ffe066','#8ef07a','#ff9de0'][i%3],r:rnd(2,4)});
+  for(const k of keys){
+    for(const c of customers){
+      if(c.state!=='wait' || c.n<=0 || c.want!==k || (a.carry[k]||0)<=0) continue;
+      const step = Math.min(a.carry[k], c.n);
+      a.carry[k] -= step; c.n -= step; sold += step; pay += standPrice(k)*step;
+      itemFlyer(k, {x:a.x, y:a.y}, {x:c.x, y:c.y}, null);
+      if(c.n <= 0) leaveHappy(c);
     }
   }
   if(!sold) return 'Nobody in the queue is asking for that.';
@@ -2933,9 +2908,19 @@ function openBag(where, msg){
            '<button class="cb buy" data-k="'+k+'">'+label+'</button></div>';
   }).join('');
   if(!held.length) rows = '<p class="sub">Your bag is empty \u2014 go and fill it.</p>';
+  // the whole bag in one press, for when there is nothing to think about
+  if(held.length > 1){
+    let all = 'SERVE QUEUE';
+    if(where==='market') all = 'SELL ALL \u00b7 $'+
+      fmt(held.reduce((t,k)=>t + ITEMS[k].price*a.carry[k], 0));
+    else if(keeper) all = 'STOCK ALL';
+    rows += '<div class="crow sep"><span class="ci">\u{1F392}</span>'+
+            '<span class="cn">The whole bag</span>'+
+            '<button class="cb buy" data-k="__all">'+all+'</button></div>';
+  }
   if(where==='market'){
     const got = G.till >= 1;
-    rows += '<div class="crow till"><span class="ci">\u{1F4B5}</span>'+
+    rows += '<div class="crow sep"><span class="ci">\u{1F4B5}</span>'+
             '<span class="cn">Farmhand takings</span>'+
             '<button class="cb '+(got?'buy':'')+'" data-k="__till">'+
             (got ? 'COLLECT $'+fmt(G.till) : 'NOTHING YET')+'</button></div>';
@@ -2947,9 +2932,10 @@ function openBag(where, msg){
   el('bag').querySelectorAll('.cb').forEach(btn=>{
     btn.onclick = ()=>{
       const k = btn.dataset.k;
+      const keys = k === '__all' ? ITEM_ORDER : [k];
       let err = null;
       if(k === '__till') err = collectTill() ? null : 'The farmhands have not sold anything yet.';
-      else err = where==='market' ? sellFromBag(k) : standFromBag(k);
+      else err = where==='market' ? sellBag(keys) : standBag(keys);
       // a level-up can put its own card on top; do not paint over it
       if(bagOpen === where) openBag(where, err);
     };

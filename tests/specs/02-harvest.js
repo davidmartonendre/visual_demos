@@ -5,6 +5,12 @@
  * unlisted, so selling cheese subtracted from an empty wheat stack, paid
  * wheat rates, and left the count negative -- which is what the player saw
  * as "wheat numbers disappear then reappear".
+ *
+ * The player sells from the bag panel, never by standing on the counter:
+ * walking over it used to empty the whole bag, priciest good first, which is
+ * exactly the accident the panel was added to prevent. The farmhands still
+ * sell on arrival -- they have no panel to press -- and their takings go to
+ * the till, so the counter loop is checked through one of them.
  */
 'use strict';
 const SELL = { x:11.2, y:5.5 };          // the market's sell tray
@@ -36,46 +42,86 @@ module.exports = {
     const full = await t.get(()=>({ carry: carried(player()), cap: actorCap(player()) }));
     t.eq(full.carry, full.cap, 'harvesting stops exactly at the bag limit');
 
-    /* Selling: list price, nothing left behind, nothing negative. */
+    /* Standing on the counter must not sell anything by itself. */
     await t.run(()=>{ G.coins = 0; G.earned = 0; G.till = 0;
                       const a = player(); a.carry = emptyBag(); a.carry.wheat = 20; });
     await t.stand(SELL.x, SELL.y);
     await t.tick(8);
-    const sold = await t.get(()=>({ coins: Math.round(G.coins), carry: carried(player()),
-                                    neg: ITEM_ORDER.filter(k=>player().carry[k] < 0) }));
-    t.eq(sold.carry, 0, 'the whole load is sold');
+    const stood = await t.get(()=>({ coins: Math.round(G.coins), wheat: player().carry.wheat }));
+    t.eq(stood.wheat, 20, 'walking onto the counter leaves the bag alone');
+    t.eq(stood.coins, 0, 'and earns nothing until you choose to sell');
+
+    /* Selling from the panel: list price, nothing left behind, nothing
+       negative. */
+    const sold = await t.get(()=>{
+      const err = sellBag(['wheat']);
+      return { err, coins: Math.round(G.coins), carry: carried(player()),
+               neg: ITEM_ORDER.filter(k=>player().carry[k] < 0) };
+    });
+    t.eq(sold.err, null, 'the panel sells what you asked it to');
+    t.eq(sold.carry, 0, 'the whole stack goes');
     t.eq(sold.coins, 20 * 3, '20 wheat pays list price');
     t.eq(sold.neg.length, 0, 'no stack goes negative');
 
-    /* A mixed load: every good must fetch its own price, and the priciest
-       goes first. This is the check the old hard-coded list failed. */
-    const want = await t.get(()=>{
+    /* A mixed load: every good must fetch its own price. This is the check
+       the old hard-coded list failed. */
+    const mixed = await t.get(()=>{
       const a = player(); a.carry = emptyBag();
       a.carry.cheese = 4; a.carry.flour = 5; a.carry.cherrypie = 2;
       G.coins = 0; G.earned = 0;
-      return 4*ITEMS.cheese.price + 5*ITEMS.flour.price + 2*ITEMS.cherrypie.price;
+      const want = 4*ITEMS.cheese.price + 5*ITEMS.flour.price + 2*ITEMS.cherrypie.price;
+      sellBag(ITEM_ORDER);
+      return { want, coins: Math.round(G.coins), carry: carried(a),
+               neg: ITEM_ORDER.filter(k=>a.carry[k] < 0) };
     });
-    await t.stand(SELL.x, SELL.y);
-    await t.tick(10);
-    const mixed = await t.get(()=>({ coins: Math.round(G.coins), carry: carried(player()),
-                                     neg: ITEM_ORDER.filter(k=>player().carry[k] < 0) }));
-    t.eq(mixed.coins, want, 'a mixed load pays each good its own price');
+    t.eq(mixed.coins, mixed.want, 'a mixed load pays each good its own price');
     t.eq(mixed.carry, 0, 'a mixed load sells out completely');
     t.eq(mixed.neg.length, 0, 'selling cheese never drives wheat negative');
 
-    /* A late-game backpack holds a few hundred items -- it is capped at 400,
-       so the pads past the cap are still worth buying for the ones below it.
-       Parcels are sized from a constant, never from what is left, or the tail
-       of the stack decays geometrically and the last items never arrive. */
-    await t.run(()=>{ G.up.bag = 20; G.coins = 0; G.earned = 0;
-                      const a = player(); a.carry = emptyBag(); a.carry.wheat = capacity(); });
-    const big = await t.get(()=>capacity());
-    await t.stand(SELL.x, SELL.y);
-    await t.tick(60);
-    const drained = await t.get(()=>({ carry: carried(player()), coins: Math.round(G.coins) }));
-    t.eq(big, 400, 'a maxed backpack holds four hundred');
-    t.eq(drained.carry, 0, 'a full late-game bag drains completely');
-    t.eq(drained.coins, big * 3, 'and pays for every last item');
+    /* Selling one good must leave the others where they are -- the whole
+       point of choosing. */
+    const one = await t.get(()=>{
+      const a = player(); a.carry = emptyBag();
+      a.carry.wheat = 9; a.carry.milk = 4;
+      G.coins = 0; G.earned = 0;
+      sellBag(['milk']);
+      return { coins: Math.round(G.coins), wheat: a.carry.wheat, milk: a.carry.milk };
+    });
+    t.eq(one.milk, 0, 'the good you picked is sold');
+    t.eq(one.wheat, 9, 'and the rest of the bag is untouched');
+    t.eq(one.coins, 4 * 16, 'paid for that good alone');
+
+    /* A maxed backpack holds four hundred, and the panel takes the lot in
+       one press. */
+    const big = await t.get(()=>{
+      G.up.bag = 20; G.coins = 0; G.earned = 0;
+      const a = player(); a.carry = emptyBag(); a.carry.wheat = capacity();
+      const cap = capacity();
+      sellBag(ITEM_ORDER);
+      return { cap, carry: carried(a), coins: Math.round(G.coins) };
+    });
+    t.eq(big.cap, 400, 'a maxed backpack holds four hundred');
+    t.eq(big.carry, 0, 'and a full one empties in a single press');
+    t.eq(big.coins, big.cap * 3, 'paying for every last item');
+
+    /* The farmhands still sell on arrival, into the till. Their parcels are
+       sized from a constant, never from what is left, or the tail of the
+       stack decays geometrically and the last items never arrive. */
+    // the player has to be somewhere else: standing anywhere near the counter
+    // collects the till as fast as the hand fills it
+    await t.run(()=>{ G.till = 0; G.coins = 0;
+      const a = player(); a.x = 22; a.y = 12; a.carry = emptyBag();
+      actors.length = 1;
+      const h = newActor(11.2, 5.5, true, false, 'field');
+      h.carry = emptyBag(); h.carry.wheat = actorCap(h);
+      actors.push(h); });
+    const load = await t.get(()=>actorCap(actors[1]));
+    await t.tick(4);              // it drains in about three, then walks off
+    const hand = await t.get(()=>({ carry: carried(actors[1]), till: Math.round(G.till) }));
+    t.eq(load, 80, 'a farmhand carries eighty');
+    t.eq(hand.carry, 0, 'and its whole load reaches the counter');
+    t.eq(hand.till, load * 3, 'every item of it paid into the till');
+    await t.run(()=>{ actors.length = 1; });
 
     /* Fruit comes off a branch at half the speed wheat comes off the field,
        and stays half however sharp the scythe is -- the groves are meant to

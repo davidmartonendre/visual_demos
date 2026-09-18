@@ -107,11 +107,12 @@ resolves any level above the top of it, and a banner fires only from
 
 These are all bugs that actually happened here.
 
-- **Anything with a cap needs a reservation counter.** Items fly to a tray over a
-  couple of seconds and only land in the flyer's callback. A loop that checks the
-  stored amount is reading a number that is seconds out of date, and unloads past
-  the cap. Trays use `s.pend`; the stall uses `stockPend`. Neither is saved —
-  nothing is in flight across a reload.
+- **Anything filled over time needs a reservation counter.** Items fly to a tray
+  over a couple of seconds and only land in the flyer's callback. A loop that checks
+  the stored amount is reading a number that is seconds out of date, and unloads
+  past the cap. Trays use `s.pend`, which is not saved — nothing is in flight across
+  a reload. The stall's stock arrives in one piece from the bag panel, so it needs
+  no such counter; it had one while the stand filled it a parcel at a time.
 - **Size a parcel from a constant, never from what is left.** `flowStep()` takes
   capacity or tray cap. Halving the remainder each time decays geometrically and
   the last few items never arrive.
@@ -130,6 +131,11 @@ These are all bugs that actually happened here.
   though the hands had earned nothing. The pile has its own square now
   (`TILL_PAD`) and is drawn with the depth-sorted entities — the trays go down
   before the buildings, so anything drawn with them ends up under a roof.
+- **The player sells from the panel, never by standing somewhere.** The counter
+  sold the whole bag priciest-first on contact, and the stand served the queue or
+  filled the stall the same way, so walking past cost you a load you were carrying
+  somewhere else. `serveStand()` is a hint now; `sellBag()` and `standBag()` do the
+  moving, from a button. The farmhands still sell on arrival — they have no panel.
 - **A villager who leaves has to leave by the road.** Served customers used to
   walk due north, which took them straight through the farm stand and the
   stall. They step out to `LEAVE_LANE` and walk back the way they came.
@@ -142,7 +148,7 @@ These are all bugs that actually happened here.
 
 ```sh
 open index.html          # play it
-node tests/run.js        # 519 checks, ~8 seconds
+node tests/run.js        # 532 checks, ~8 seconds
 node tests/run.js ranks  # just the specs whose name matches
 ```
 
