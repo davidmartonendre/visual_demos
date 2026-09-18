@@ -31,7 +31,6 @@ module.exports = {
       const it = d.items[k];
       t.ok(it && typeof it.price === 'number' && it.price > 0, k + ' has a price');
       t.ok(it && !!it.label, k + ' has a label');
-      t.ok(it && !!it.pill, k + ' has a HUD icon');
     }
     t.eq(d.bagKeys.join(','), d.order.join(','), 'emptyBag() covers exactly ITEM_ORDER');
     t.eq(d.stock.join(','), d.order.join(','), 'the stall stock covers exactly ITEM_ORDER');
@@ -55,6 +54,23 @@ module.exports = {
       return out;
     }, d.order);
     for(const k of d.order) t.gt(painted[k], 20, 'drawItem() actually draws ' + k);
+
+    /* That drawing is the good's only picture: the HUD pills and the bag
+       panel are painted from it. An emoji column alongside it drifted -- a
+       honey pot for cherry jam, a tub of ice cream for cherry pie. */
+    const icons = await t.get(order => {
+      const out = {};
+      for(const k of order){
+        const src = itemIcon(k);
+        out[k] = typeof src === 'string' && src.startsWith('data:image/png') && src.length > 400;
+      }
+      out.__pill = order.some(k => !!ITEMS[k].pill);
+      out.__hud = order.every(k => !!el('p-'+k).querySelector('img'));
+      return out;
+    }, d.order);
+    for(const k of d.order) t.ok(icons[k], k + ' has a HUD icon painted from that drawing');
+    t.ok(!icons.__pill, 'and no emoji column left to drift out of step with it');
+    t.ok(icons.__hud, 'every pill shows one');
 
     /* Nothing unobtainable: every good is grown in a patch or made by a recipe. */
     const made = new Set(d.patches.map(p=>p.item));
