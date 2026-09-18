@@ -191,7 +191,7 @@ const STATIONS = [
     trays:[ {mode:'sell', x:10.2, y:3.4, w:2.0, h:4.2} ] },
 
   { id:'windmill', name:'WINDMILL', kind:'make', unlocked:false, motif:'sails',
-    shape:'mill', b:{x:4.7,y:11,w:5.3,h:4}, roof:'#5b8ec4',
+    shape:'mill', b:{x:5.9,y:11.2,w:3.8,h:3.8}, roof:'#5b8ec4',
     recipe:{ in:{wheat:2}, out:'flour', time:1.2 },
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:10.9, w:2.0, h:1.9},
             {mode:'out', item:'flour', x:10.2, y:13.1, w:2.0, h:1.9} ] },
@@ -713,7 +713,7 @@ function collide(a){
 }
 
 function moveActor(a, dx, dy, mag, dt){
-  const sp = moveSpeed() * (a.hand?0.88:1) * mag;
+  const sp = moveSpeed() * (a.hand?0.5:1) * mag;    // hired help is not you
   const ax = dx*sp, ay = dy*sp;
   a.vx = lerp(a.vx, ax, 1-Math.pow(0.0008, dt));
   a.vy = lerp(a.vy, ay, 1-Math.pow(0.0008, dt));
@@ -764,7 +764,7 @@ function tryHarvest(a, dt){
     if(!a.hand) hint('bagfull', 'BAG FULL \u2014 go sell it!');
     a.cut = 0; return false;
   }
-  a.cut += dt * harvestRate() * (a.hand?0.8:1);
+  a.cut += dt * harvestRate() * (a.hand?0.45:1);
   if(a.cut < 1) return false;
   a.cut = 0;
 
@@ -974,6 +974,19 @@ function updateHand(a, dt){
     if(a.work <= 0){
       a.state = 'nap'; a.napT = rnd(11,19);
       a.target = null; a.tray = null; a.cut = 0;
+      const lost = carried(a);
+      if(lost > 0){                       // down tools, and the load goes with them
+        for(const k of ITEM_ORDER){
+          if(!a.carry[k]) continue;
+          const col = k==='wheat' ? '#f2cc3f' : k==='apple' ? '#d8402f' : '#efe3c6';
+          for(let i=0;i<Math.min(8, a.carry[k]);i++)
+            puffs.push({ x:a.x+rnd(-.5,.5), y:a.y+rnd(-.5,.5), z:rnd(.5,1.4),
+                         vx:rnd(-2.2,2.2), vy:rnd(-2.2,2.2), vz:rnd(1,3),
+                         t:0, life:rnd(.6,1.2), col, r:rnd(2.5,4.5) });
+          a.carry[k] = 0;
+        }
+        pops.push({ x:a.x, y:a.y, z:1.2, t:0, txt:'dropped '+lost, col:'#ffb0a0' });
+      }
       return;
     }
   }
@@ -1453,8 +1466,8 @@ function drawWindow(P0,P1,H,u,v,hw,hv){
 function drawBuilding(s){
   const b = s.b;
   const shape = s.shape || 'house';
-  const H  = shape==='mill' ? 92 : shape==='shed' ? 60 : 74;
-  const RH = shape==='mill' ? 50 : shape==='shed' ? 34 : 40;
+  const H  = shape==='mill' ? 84 : shape==='shed' ? 60 : 74;
+  const RH = shape==='mill' ? 44 : shape==='shed' ? 34 : 40;
   const OV = 0.25;                                   // roof overhang, in tiles
   const wallS = '#f3e6cb', wallE = '#dbcaa9';
 
@@ -1547,14 +1560,14 @@ function drawBuilding(s){
     const ang = G.t*0.85;
     for(let i=0;i<4;i++){
       const a1 = ang + i*Math.PI/2;
-      const ex = cx + Math.cos(a1)*62, ey = cy + Math.sin(a1)*62;
+      const ex = cx + Math.cos(a1)*54, ey = cy + Math.sin(a1)*54;
       ctx.strokeStyle='#6b4a28'; ctx.lineWidth=7; ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
       ctx.save(); ctx.translate(ex, ey); ctx.rotate(a1);
       ctx.fillStyle='#fdf6e6'; ctx.strokeStyle='#b9a37c'; ctx.lineWidth=2.5;
-      roundRect(-32, -13, 32, 26, 4); ctx.fill(); ctx.stroke();
+      roundRect(-28, -11, 28, 22, 4); ctx.fill(); ctx.stroke();
       ctx.strokeStyle='#d9cbaa'; ctx.lineWidth=2;
-      for(let k=1;k<4;k++){ ctx.beginPath(); ctx.moveTo(-32+k*8, -13); ctx.lineTo(-32+k*8, 13); ctx.stroke(); }
+      for(let k=1;k<4;k++){ ctx.beginPath(); ctx.moveTo(-28+k*7, -11); ctx.lineTo(-28+k*7, 11); ctx.stroke(); }
       ctx.restore();
     }
     ctx.fillStyle='#4a3418'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, 6.29); ctx.fill();

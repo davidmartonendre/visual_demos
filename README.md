@@ -70,8 +70,9 @@ it's paid off.
 - **Farmhands** — up to 6; they work the wheat field and feed whichever workshop is
   emptiest, falling back to selling when everything is full. **Half of them are
   lazy**, rolled when you hire them and fixed for good: a lazy one puts in a decent
-  stretch, then lies down in the wheat for a nap before getting up and carrying on.
-  You will know which is which. Hiring is a gamble.
+  stretch, then downs tools and lies in the wheat for a nap — **dropping whatever it
+  was carrying** — before getting up and carrying on. You will know which is which.
+  Hiring is a gamble. They also work at about half your pace, keen or not.
 - **Artisans** — every workshop makes more per batch, up to 8 at a time
 - Plus the six buildings and the orchard themselves
 
