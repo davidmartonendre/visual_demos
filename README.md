@@ -163,6 +163,16 @@ node tests/run.js
 The game itself still has no dependencies; the suite needs a browser driver and
 nothing else. See `tests/README.md`.
 
+## Working on it
+
+If you are new to this — or to games — start with `docs/`:
+
+- **`docs/architecture.md`** — where everything lives in `index.html`, line by line,
+  how to add a good, a building or an upgrade, and the traps that have already
+  caught someone.
+- **`docs/engine-options.md`** — what it would take to move this onto a real game
+  framework and package it for Android and iOS, and the order to do it in.
+
 ## Notes
 
 - Villagers and order boards only ask for goods you can currently produce, so there

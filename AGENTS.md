@@ -16,6 +16,9 @@ deliberately.
   once, and the comment above such a check says so — read it before deciding a
   failure is the test's fault. When you fix a bug, add the check that would have
   caught it; when you add a feature, add a spec for it.
+- `docs/architecture.md` is the map of this file — section line ranges, the recipes
+  for adding a good or a building, and the bugs that have already been written here
+  once. `docs/engine-options.md` is the standing plan for moving off a single file.
 - Rendering is canvas 2D with a hand-rolled isometric projection
   (`iso()`, `worldToScreen()`); the world is in tile units and screen work happens
   in iso-space pixels inside one `ctx.translate/scale` transform.
