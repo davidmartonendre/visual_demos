@@ -27,6 +27,16 @@ deliberately.
 - Villagers are real customers, not scenery: they queue at the farm stand and buy
   what their bubble asks for. Anything that gives an NPC a visible want must be
   serveable.
+- Farmhands only ever carry wheat. They must never pick up from an `out` tray:
+  nothing but wheat can be unloaded at the places they walk to, so one stray item
+  strands them in `deliver` forever, shuffling between input trays. `deliveryTarget()`
+  therefore routes by what an actor is actually carrying, and only the market — which
+  buys everything — is a valid destination for a non-wheat load. There is also a
+  watchdog: a load that has not gone down in 10s re-routes to the market.
+- Half of hired farmhands are lazy (`a.lazy`, rolled once in `newActor`, persisted in
+  `G.handLazy` so a reload cannot reroll it). A lazy hand works a stretch, then naps
+  where it stands and resumes. Naps are drawn lying down with closed eyes and z's —
+  idle behaviour must always *look* deliberate, or it reads as the bug above.
 - Item transfers move in parcels sized from carrying capacity (`flowStep`), because
   a late-game backpack holds over a thousand items. Size a parcel from a constant
   (capacity, tray cap), never from the amount remaining — that decays geometrically

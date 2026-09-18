@@ -55,7 +55,9 @@ Three buyers, each wanting something different from you:
   (*"6 milk + 8 apples"*) and pays **2.3×** for filling one. Orders re-roll as your
   farm learns to make better things.
 
-Serving people is the one job your farmhands never do for you.
+Serving people is the one job your farmhands never do for you — and they never lift
+finished goods off a TAKE tray either. Moving flour, eggs and milk along the chain
+is yours.
 
 ## Upgrades
 
@@ -66,7 +68,10 @@ it's paid off.
 - **Scythe** — roughly doubles in price per level; widens the swathe you cut
 - **Boots**, **Fertilizer** — move speed and regrowth
 - **Farmhands** — up to 6; they work the wheat field and feed whichever workshop is
-  emptiest, falling back to selling when everything is full
+  emptiest, falling back to selling when everything is full. **Half of them are
+  lazy**, rolled when you hire them and fixed for good: a lazy one puts in a decent
+  stretch, then lies down in the wheat for a nap before getting up and carrying on.
+  You will know which is which. Hiring is a gamble.
 - **Artisans** — every workshop makes more per batch, up to 8 at a time
 - Plus the six buildings and the orchard themselves
 

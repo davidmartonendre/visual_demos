@@ -248,7 +248,7 @@ const PADS = [
   { id:'coop',   name:'CHICKEN COOP', icon:'\u{1F414}', x:17.4, y:23.0, cost:300,  mul:1,    max:1,
     desc:()=>'Wheat \u2192 eggs',             show:()=>G.up.windmill>0 },
   { id:'hand',   name:'HIRE FARMHAND',icon:'\u{1F468}', x:14.6, y:26.6, cost:360,  mul:2.0,  max:6,
-    desc:l=>l+' farmhands working',          show:()=>G.up.coop>0 },
+    desc:l=>l+' hired (some are lazy)',      show:()=>G.up.coop>0 },
   { id:'bakery', name:'BAKERY',       icon:'\u{1F967}', x:17.4, y:30.2, cost:1000, mul:1,    max:1,
     desc:()=>'Flour + eggs \u2192 pies',      show:()=>G.up.coop>0 && G.earned>=900 },
   { id:'crew',   name:'HIRE ARTISANS',icon:'\u{1F9D1}', x:14.6, y:33.8, cost:900, mul:1.85, max:8,
@@ -277,14 +277,16 @@ function moveSpeed(){ return 5.0 * (1 + 0.15*G.up.boots); }
 function carried(a){ let n=0; for(const k of ITEM_ORDER) n += a.carry[k]; return n; }
 function patchOpen(p){ return !p.gate || G.up[p.gate] > 0; }
 
-function newActor(x,y,hand){
+function newActor(x,y,hand,lazy){
   return { x, y, vx:0, vy:0, face:2.2, bob:0, hand:!!hand,
+           lazy: !!hand && (lazy === undefined ? Math.random() < 0.5 : !!lazy),
+           work: rnd(16,26), napT:0,
            carry:emptyBag(), cut:0, state:'seek', target:null, wait:0,
            tint: hand ? ['#4e7fd4','#d4684e','#5fb04e','#b45fd4','#d4a44e'][((typeof actors!=='undefined'&&actors)?actors.length:0)%5] : '#e2574c' };
 }
 
 function resetGame(){
-  G = { coins:START_COINS, earned:0, level:1, up:{}, paid:{}, hands:0, t:0,
+  G = { coins:START_COINS, earned:0, level:1, up:{}, paid:{}, hands:0, handLazy:[], t:0,
         sound:true, seenHint:{}, won:false, story:{}, journal:[], orders:[] };
   for(const id of UPGRADE_IDS) G.up[id] = 0;
   for(const p of PADS) G.paid[p.id]=0;
@@ -415,7 +417,7 @@ function saveData(){
   return {
     game:'harvest-hero', format:3,
     savedAt:new Date().toISOString(), level:G.level,
-    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
+    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands, handLazy:G.handLazy,
     sound:G.sound, seenHint:G.seenHint, won:G.won,
     story:G.story, journal:G.journal, orders:G.orders };
 }
@@ -491,6 +493,11 @@ function sanitiseSave(d){
 
   // farmhands are exactly the times that pad was bought
   out.hands  = out.up.hand;
+  out.handLazy = [];
+  for(let i=0;i<out.hands;i++){
+    const v = Array.isArray(d.handLazy) ? d.handLazy[i] : undefined;
+    out.handLazy.push(v === undefined ? Math.random() < 0.5 : !!v);   // older saves roll now
+  }
 
   out.paid = {};
   for(const pad of PADS){
@@ -557,6 +564,7 @@ function applySave(d){
   Object.assign(G.up, d.up||{}); Object.assign(G.paid, d.paid||{});
   G.sound = d.sound!==false; G.seenHint = d.seenHint||{}; G.won=!!d.won;
   G.story = d.story||{}; G.journal = d.journal||[];
+  G.handLazy = Array.isArray(d.handLazy) ? d.handLazy.slice() : [];
 
   /* Saves from before the valley expanded: a bakery used to run on raw wheat,
      so grant the mill that now feeds it rather than stranding the player. */
@@ -566,7 +574,10 @@ function applySave(d){
   for(const s of STATIONS) if(s.id!=='market') s.unlocked = (G.up[s.id]||0)>0;
   G.orders = Array.isArray(d.orders) && d.orders.length ? d.orders : [];
   refreshOrders();
-  for(let i=0;i<G.hands;i++) actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true));
+  for(let i=0;i<G.hands;i++){
+    if(G.handLazy[i] === undefined) G.handLazy[i] = Math.random() < 0.5;
+    actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true, G.handLazy[i]));
+  }
 }
 
 /* ---- save files -------------------------------------------------------
@@ -827,6 +838,9 @@ function tryStations(a, dt){
 
       if(tr.mode==='out'){
         const it = tr.item;
+        // Farmhands must not lift finished goods: nothing they carry but wheat
+        // can be unloaded anywhere they walk, so a stray pie would strand them.
+        if(a.hand) continue;
         if(s.out<=0 || carried(a)>=actorCap(a)) continue;
         const step0 = flowStep(TRAY_CAP);
         while(a.ioT >= IO_INTERVAL && s.out>0 && carried(a)<actorCap(a)){
@@ -907,25 +921,54 @@ function buyPad(p){
     hint('open'+p.id, st.name+' OPEN \u2014 ' + (r ? ins+' \u2192 '+ITEMS[r.out].label.toLowerCase() : 'ready'), true);
   }
   if(p.id==='orchard') hint('openorchard','The orchard is planted \u2014 walk under the trees to pick apples', true);
-  if(p.id==='hand'  ){ G.hands++; actors.push(newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true));
-    hint('handdone','A farmhand joined! They work the wheat field for you.', true); }
+  if(p.id==='hand'  ){
+    G.hands++;
+    const hand = newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true);
+    G.handLazy.push(hand.lazy);
+    actors.push(hand);
+    hint('hand'+G.hands, hand.lazy
+      ? 'A farmhand joined \u2014 though this one yawned all the way here.'
+      : 'A farmhand joined! They work the wheat field for you.', true);
+  }
   save();
 }
 
 /* ------------------------------------------------------------ farmhand AI */
-function deliveryTarget(){
-  let best = null, bestFill = 1e9;
-  for(const st of STATIONS){
-    if(!st.unlocked || st.kind!=='make' || !st.recipe.in.wheat) continue;
-    const fill = st.bin.wheat + st.pend.wheat;
-    if(fill >= TRAY_CAP-2) continue;
-    if(fill < bestFill){ bestFill = fill; best = st.trays.find(t=>t.mode==='in' && t.item==='wheat'); }
+function deliveryTarget(a){
+  // only a wheat load belongs at a workshop; anything else goes to the market,
+  // which buys every good and can therefore never leave a hand holding something
+  if(a && a.carry.wheat > 0){
+    let best = null, bestFill = 1e9;
+    for(const st of STATIONS){
+      if(!st.unlocked || st.kind!=='make' || !st.recipe.in.wheat) continue;
+      const fill = st.bin.wheat + st.pend.wheat;
+      if(fill >= TRAY_CAP-2) continue;
+      if(fill < bestFill){ bestFill = fill; best = st.trays.find(t=>t.mode==='in' && t.item==='wheat'); }
+    }
+    if(best) return best;
   }
-  return best || station('market').trays[0];
+  return station('market').trays[0];
 }
 
 function updateHand(a, dt){
   a.think = (a.think||0) - dt;
+
+  /* Half of the farmhands you hire are lazy. They put in a decent stretch,
+     then down tools and sleep it off before getting up and carrying on. */
+  if(a.lazy){
+    if(a.state === 'nap'){
+      a.napT -= dt;
+      moveActor(a, 0, 0, 0, dt);
+      if(a.napT <= 0){ a.state = 'seek'; a.target = null; a.work = rnd(16,26); }
+      return;
+    }
+    a.work -= dt;
+    if(a.work <= 0){
+      a.state = 'nap'; a.napT = rnd(11,19);
+      a.target = null; a.tray = null; a.cut = 0;
+      return;
+    }
+  }
 
   if(a.state==='seek'){
     if(carried(a) >= actorCap(a)){ a.state='deliver'; a.target=null; a.think=0; }
@@ -951,8 +994,13 @@ function updateHand(a, dt){
       } else moveActor(a,0,0,0,dt);
     }
   } else {
-    if(carried(a) <= 0){ a.state='seek'; a.target=null; a.think=0; return; }
-    if(!a.tray || a.think<=0){ a.think=1.2; a.tray = deliveryTarget(); }
+    if(carried(a) <= 0){ a.state='seek'; a.target=null; a.think=0; a.stuck=0; return; }
+    // if a load has not gone down in a while, stop trying to be clever about it
+    const load = carried(a);
+    a.stuck = (load === a.lastLoad) ? (a.stuck||0) + dt : 0;
+    a.lastLoad = load;
+    if(a.stuck > 10){ a.stuck = 0; a.tray = station('market').trays[0]; }
+    else if(!a.tray || a.think<=0){ a.think=1.2; a.tray = deliveryTarget(a); }
     const c = rectCenter(a.tray);
     const dx=c.x-a.x, dy=c.y-a.y, m=Math.hypot(dx,dy);
     if(m>0.2) moveActor(a, dx/m, dy/m, 1, dt);
@@ -1613,8 +1661,10 @@ function drawPerson(a, sx, sy, tint, opts){
   opts = opts||{};
   const bob = Math.sin(a.bob*2)*3, step = Math.sin(a.bob*4);
   const flip = Math.cos(a.face) - Math.sin(a.face) < 0 ? -1 : 1;  // screen-facing
+  const napping = a.state === 'nap';
   ctx.globalAlpha=.25; ctx.fillStyle='#000';
-  ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7.5, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.ellipse(sx, sy, napping?21:15, napping?9:7.5, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+  if(napping){ ctx.save(); ctx.translate(sx-9, sy+3); ctx.rotate(-1.28); ctx.translate(-sx, -sy); }
 
   // legs
   ctx.fillStyle='#3c5fa0';
@@ -1633,8 +1683,15 @@ function drawPerson(a, sx, sy, tint, opts){
   ctx.fillStyle=opts.hair||'#5b3a1c';
   ctx.beginPath(); ctx.arc(sx, hy-2, 11.5, Math.PI*1.03, Math.PI*2.05); ctx.fill();
   ctx.fillStyle='#3a2a1a';
-  ctx.beginPath(); ctx.arc(sx+flip*2-3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
-  ctx.beginPath(); ctx.arc(sx+flip*2+3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  if(napping){
+    ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1.8; ctx.lineCap='round';
+    for(const ex of [-3.4, 3.4]){
+      ctx.beginPath(); ctx.arc(sx+flip*2+ex, hy+1.6, 2.4, 0.35, Math.PI-0.35); ctx.stroke();
+    }
+  } else {
+    ctx.beginPath(); ctx.arc(sx+flip*2-3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx+flip*2+3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  }
   ctx.strokeStyle='#b5745a'; ctx.lineWidth=1.6; ctx.lineCap='round';
   ctx.beginPath(); ctx.arc(sx+flip*2, hy+4.5, 3.2, 0.35, Math.PI-0.35); ctx.stroke();
 
@@ -1666,6 +1723,19 @@ function drawPerson(a, sx, sy, tint, opts){
     ctx.font='900 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#00000099'; ctx.lineWidth=4;
     ctx.strokeText('+'+(total-SHOW), sx, ty); ctx.fillText('+'+(total-SHOW), sx, ty);
+  }
+  if(napping){
+    ctx.restore();
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(let i=0;i<3;i++){
+      const t = (G.t*0.5 + i/3) % 1;
+      ctx.globalAlpha = Math.min(1, 2-2*t);
+      ctx.font = '900 ' + (11 + t*9) + 'px system-ui,sans-serif';
+      ctx.fillStyle='#fff'; ctx.strokeStyle='#00000077'; ctx.lineWidth=3;
+      const zx = sx + 16 + t*13, zy = sy - 24 - t*34;
+      ctx.strokeText('z', zx, zy); ctx.fillText('z', zx, zy);
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
