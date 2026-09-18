@@ -812,7 +812,13 @@ function tryStations(a, dt){
         const step0 = flowStep(actorCap(a));   // constant, so the stack always drains
         while(a.ioT >= IO_INTERVAL && carried(a)>0){
           a.ioT -= IO_INTERVAL;
-          const it = a.carry.pie>0 ? 'pie' : a.carry.egg>0 ? 'egg' : 'wheat';
+          // the priciest thing actually in the bag. Never assume an item is
+          // there: subtracting from an empty stack drives it negative, which
+          // silently pays wheat rates for cheese and breaks every count.
+          let it = null, best = -1;
+          for(const k of ITEM_ORDER)
+            if(a.carry[k] > 0 && ITEMS[k].price > best){ best = ITEMS[k].price; it = k; }
+          if(!it) break;
           // never in fewer than ~8 parcels, so even a small load still streams
           const step = Math.max(1, Math.min(a.carry[it], step0, Math.ceil(a.carry[it]/8)));
           a.carry[it] -= step;
@@ -1712,10 +1718,11 @@ function drawTray(s, tr){
     ctx.font='900 26px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#8a5a00'; ctx.lineWidth=5;
     ctx.strokeText('SELL', p.sx, p.sy-6); ctx.fillText('SELL', p.sx, p.sy-6);
-    const shown = ['wheat'].concat(station('coop').unlocked?['egg']:[], station('bakery').unlocked?['pie']:[]);
-    ctx.font='900 14px system-ui,sans-serif'; ctx.fillStyle='#fff'; ctx.lineWidth=4;
+    const all = availableItems();
+    const shown = all.slice(0, 4);                 // the counter is only so wide
+    ctx.font='900 13px system-ui,sans-serif'; ctx.fillStyle='#fff'; ctx.lineWidth=4;
     shown.forEach((k,i)=>{
-      const x = p.sx + (i-(shown.length-1)/2)*54;
+      const x = p.sx + (i-(shown.length-1)/2)*46;
       drawItem(k, x-11, p.sy+18, .8);
       ctx.strokeText('$'+ITEMS[k].price, x+11, p.sy+18);
       ctx.fillText('$'+ITEMS[k].price, x+11, p.sy+18);
@@ -1824,10 +1831,9 @@ function drawPerson(a, sx, sy, tint, opts){
   }
 
   // carried stack
-  const order = ['wheat','egg','pie'];
   const total = carried(a), SHOW = 9, STEP = 8.5;
   let idx = 0;
-  for(const k of order){
+  for(const k of ITEM_ORDER){
     for(let i=0;i<a.carry[k];i++){
       if(idx>=SHOW) break;
       const wob = Math.sin(G.t*6 + idx*0.6)*1.5 + (a.moving? Math.sin(a.bob*4+idx)*1.1:0);
@@ -1917,10 +1923,11 @@ function drawStall(){
   poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#a87740');
   poly([up(N,H),up(E,H),up(S,H),up(W,H)], '#e8d3ac');
   // produce sitting on the counter
-  const shown = wantedItems();
+  const shown = wantedItems().slice(0, 4);        // only what fits on the counter
   shown.forEach((k,i)=>{
-    const q = iso(b.x+0.5+i*0.75, b.y+b.h/2);
-    drawItem(k, q.sx, q.sy-H-4, 0.85);
+    const u = (i + 0.5) / shown.length;           // spread across its actual width
+    const q = iso(b.x + u*b.w, b.y + b.h/2);
+    drawItem(k, q.sx, q.sy-H-4, 0.8);
   });
   // posts
   ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=5; ctx.lineCap='round';
@@ -2056,7 +2063,7 @@ function draw(){
    HUD / UI
    ===================================================================== */
 const el = id=>document.getElementById(id);
-const hudVal = {};
+const hudVal = {}, pillSeen = {};
 function setPill(id, v, show){
   const node = el(id);
   node.classList.toggle('hide', !show);
@@ -2084,8 +2091,13 @@ function syncHUD(){
   const a = player();
   setPill('p-coin', fmt(G.coins), true);
   const open = availableItems();
-  for(const k of ITEM_ORDER)
-    setPill('p-'+k, a.carry[k], a.carry[k] > 0 || (k==='wheat' && open.length<2));
+  for(const k of ITEM_ORDER){
+    const n = a.carry[k];
+    if(n > 0) pillSeen[k] = G.t;
+    // linger a moment once emptied, so unloading does not make the row flicker
+    const recent = pillSeen[k] !== undefined && G.t - pillSeen[k] < 4;
+    setPill('p-'+k, n, n > 0 || recent || (k==='wheat' && open.length<2));
+  }
   const prev = levelReq(G.level-1), next = levelReq(G.level);
   el('levelfill').style.width = clamp((G.earned-prev)/(next-prev)*100,0,100)+'%';
   el('lvltxt').textContent = 'LEVEL '+G.level+'  ·  $'+fmt(G.earned);

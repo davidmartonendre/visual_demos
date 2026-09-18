@@ -30,6 +30,15 @@ deliberately.
 - Anything the player can carry must be in `ITEM_ORDER` and `ITEMS`, have a case in
   `drawItem()`, and be produced either by a station recipe or a patch. `emptyBag()`
   builds every inventory, so never hand-write `{wheat:0, egg:0}` literals.
+- Never hard-code a list of goods anywhere else either: iterate `ITEM_ORDER` or
+  `availableItems()`. Four places were left listing only wheat/egg/pie after the
+  valley expanded, and the market's was harmful — it fell through to `'wheat'` for
+  anything unlisted, subtracted from an empty stack, and drove the wheat count
+  negative while paying wheat rates for cheese. Anything that picks an item to move
+  must pick one the actor is actually holding, and bail out when there is none.
+- Anything laid out along a building (stall produce, counter prices) must be spaced
+  from that building's own width and capped, or it marches off the end once enough
+  goods are unlocked.
 - `availableItems()` is the single source of truth for what exists yet; the HUD
   pills, the villagers' wants and the order board all derive from it, which is what
   keeps the game from asking for goods the player cannot make.
