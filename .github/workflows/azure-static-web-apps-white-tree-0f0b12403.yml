@@ -1,17 +1,27 @@
 name: Azure Static Web Apps CI/CD
 
+# Main only, on purpose.
+#
+# The scaffolded workflow also ran on every pull request, and each run asked
+# Azure for a preview environment of its own. A Free-tier Static Web App allows
+# three of those, and the previews from earlier pull requests are still holding
+# them, so every run since has been rejected with "This Static Web App already
+# has the maximum number of staging environments". The tear-down job then
+# failed too -- there was no preview to close, so it reported "No matching
+# static site found" -- which is why one pull request produced two red checks
+# and neither had anything to do with the code in it.
+#
+# There is nothing in a preview that main does not show a minute later, so the
+# pull_request trigger and the job that tore those previews down are both gone.
+# To bring previews back, delete the stale environments in the Azure portal
+# (Static Web App -> Environments) and restore the trigger and the close job.
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
     branches:
       - main
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
@@ -53,19 +63,3 @@ jobs:
           skip_api_build: true
           github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
-
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          # The scaffolded OIDC template leaves this out, so tearing down a
-          # merged PR's preview failed every time with "deployment_token was
-          # not provided". The close action has no OIDC path -- it needs the
-          # token like any other.
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WHITE_TREE_0F0B12403 }}
-          action: "close"
