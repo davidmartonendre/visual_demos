@@ -2127,11 +2127,12 @@ function showChapter(c){
 
 function openSaveFile(){
   save();
-  const text = JSON.stringify(saveData(), null, 2);
+  const text = encodeSave(saveData());   // same bytes the download writes
   modal('Your farm, as a file',
     '<div id="savebox">'+
       '<p>Download it to keep a backup, move it to another browser or device, '+
-      'or paste one back in below.</p>'+
+      'or paste one back in below. The text is scrambled on purpose \u2014 copy all '+
+      'of it.</p>'+
       '<textarea id="savetxt" spellcheck="false"></textarea>'+
       '<div class="sbtns">'+
         '<button class="sbtn" id="s-dl">DOWNLOAD</button>'+
