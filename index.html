@@ -65,6 +65,21 @@
   #jrn .e span{font-size:13.5px;font-weight:700;line-height:1.45;display:block}
   #jrn .lock{opacity:.45;font-style:italic}
 
+  /* ---------- save panel ---------- */
+  #savebox{text-align:left}
+  #savebox p{font-size:13.5px;margin-bottom:9px}
+  #savetxt{width:100%;height:92px;resize:vertical;border-radius:10px;padding:8px 10px;
+    border:2px solid #c9a96a;background:#fffdf5;color:#5c4526;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;line-height:1.4}
+  .sbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .sbtn{flex:1 1 calc(50% - 8px);border:none;cursor:pointer;font-family:inherit;font-weight:900;
+    font-size:14px;color:#fff;padding:9px 10px 11px;border-radius:11px;
+    background:linear-gradient(#7aa7d8,#4a7cb5);box-shadow:0 4px 0 #35608f;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .sbtn.go{background:linear-gradient(#7ed34f,#4da32c);box-shadow:0 4px 0 #34781d}
+  .sbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #35608f}
+  #savemsg{margin-top:9px;font-size:13px;font-weight:800;min-height:17px}
+  #savemsg.s-ok{color:#2e8b3f} #savemsg.s-bad{color:#b23b3b}
+
   /* ---------- modal ---------- */
   #modal{position:absolute;inset:0;z-index:9;display:none;place-items:center;background:rgba(8,14,6,.72);padding:24px}
   #modal.on{display:grid}
@@ -72,10 +87,15 @@
     background:linear-gradient(#fff8e6,#f2e3bf);color:#4a3418;box-shadow:0 14px 0 #c9a96a,0 22px 40px rgba(0,0,0,.5)}
   #card h2{font-size:27px;margin-bottom:10px;color:#a8560f}
   #card p{font-size:17px;line-height:1.5;font-weight:700;margin-bottom:8px}
-  #card .ok{margin-top:16px;border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:20px;color:#fff;
-    padding:11px 30px 14px;border-radius:15px;background:linear-gradient(#7ed34f,#4da32c);
+  #card [hidden]{display:none!important}
+  .mbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  #card .ok{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:17px;color:#fff;
+    padding:11px 17px 14px;border-radius:14px;background:linear-gradient(#7ed34f,#4da32c);
     box-shadow:0 5px 0 #34781d;text-shadow:0 2px 0 rgba(0,0,0,.25)}
-  #card .ok:active{transform:translateY(4px);box-shadow:0 1px 0 #34781d}
+  #card .ok.cancel{background:linear-gradient(#efe6d0,#d7c9a8);color:#5c4526;
+    box-shadow:0 5px 0 #b0a084;text-shadow:none}
+  #card .ok.danger{background:linear-gradient(#f2806d,#d24430);box-shadow:0 5px 0 #9b2f1f}
+  #card .ok:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
   #card .sub{font-size:14px;opacity:.75;font-weight:700}
 </style>
 </head>
@@ -96,6 +116,7 @@
     <div id="btmrow">
       <button class="round" id="b-sound">&#128266;</button>
       <button class="round" id="b-journal" title="Journal">&#128214;</button>
+      <button class="round" id="b-save" title="Save file">&#128190;</button>
       <button class="round" id="b-reset" title="Restart farm">&#8635;</button>
       <div id="lvltxt" class="pop">FARM LEVEL 1</div>
     </div>
@@ -104,7 +125,10 @@
   <div id="modal"><div id="card">
     <h2 id="m-title"></h2>
     <div id="m-body"></div>
-    <button class="ok" id="m-ok">OK</button>
+    <div class="mbtns">
+      <button class="ok cancel" id="m-cancel" hidden>CANCEL</button>
+      <button class="ok" id="m-ok">OK</button>
+    </div>
   </div></div>
 </div>
 <script>
@@ -167,13 +191,13 @@ const STATIONS = [
     trays:[ {mode:'sell', x:10.2, y:3.4, w:2.0, h:4.2} ] },
 
   { id:'windmill', name:'WINDMILL', kind:'make', unlocked:false, motif:'sails',
-    b:{x:4,y:11,w:6,h:4}, roof:'#5b8ec4',
+    shape:'mill', b:{x:5.9,y:11.2,w:3.8,h:3.8}, roof:'#5b8ec4',
     recipe:{ in:{wheat:2}, out:'flour', time:1.2 },
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:10.9, w:2.0, h:1.9},
             {mode:'out', item:'flour', x:10.2, y:13.1, w:2.0, h:1.9} ] },
 
   { id:'coop', name:'CHICKEN COOP', kind:'make', unlocked:false, motif:'perch',
-    b:{x:4,y:17,w:6,h:4}, roof:'#e08a2e',
+    shape:'shed', b:{x:5.8,y:17.1,w:4,h:3.4}, roof:'#e08a2e',
     recipe:{ in:{wheat:2}, out:'egg', time:1.5 },
     trays:[ {mode:'in',  item:'wheat', x:10.2, y:16.9, w:2.0, h:1.9},
             {mode:'out', item:'egg',   x:10.2, y:19.1, w:2.0, h:1.9} ] },
@@ -232,7 +256,7 @@ const PADS = [
   { id:'coop',   name:'CHICKEN COOP', icon:'\u{1F414}', x:17.4, y:23.0, cost:300,  mul:1,    max:1,
     desc:()=>'Wheat \u2192 eggs',             show:()=>G.up.windmill>0 },
   { id:'hand',   name:'HIRE FARMHAND',icon:'\u{1F468}', x:14.6, y:26.6, cost:360,  mul:2.0,  max:6,
-    desc:l=>l+' farmhands working',          show:()=>G.up.coop>0 },
+    desc:l=>l+' hired (some are lazy)',      show:()=>G.up.coop>0 },
   { id:'bakery', name:'BAKERY',       icon:'\u{1F967}', x:17.4, y:30.2, cost:1000, mul:1,    max:1,
     desc:()=>'Flour + eggs \u2192 pies',      show:()=>G.up.coop>0 && G.earned>=900 },
   { id:'crew',   name:'HIRE ARTISANS',icon:'\u{1F9D1}', x:14.6, y:33.8, cost:900, mul:1.85, max:8,
@@ -261,14 +285,16 @@ function moveSpeed(){ return 5.0 * (1 + 0.15*G.up.boots); }
 function carried(a){ let n=0; for(const k of ITEM_ORDER) n += a.carry[k]; return n; }
 function patchOpen(p){ return !p.gate || G.up[p.gate] > 0; }
 
-function newActor(x,y,hand){
+function newActor(x,y,hand,lazy){
   return { x, y, vx:0, vy:0, face:2.2, bob:0, hand:!!hand,
+           lazy: !!hand && (lazy === undefined ? Math.random() < 0.5 : !!lazy),
+           work: rnd(16,26), napT:0,
            carry:emptyBag(), cut:0, state:'seek', target:null, wait:0,
            tint: hand ? ['#4e7fd4','#d4684e','#5fb04e','#b45fd4','#d4a44e'][((typeof actors!=='undefined'&&actors)?actors.length:0)%5] : '#e2574c' };
 }
 
 function resetGame(){
-  G = { coins:25, earned:0, level:1, up:{}, paid:{}, hands:0, t:0,
+  G = { coins:START_COINS, earned:0, level:1, up:{}, paid:{}, hands:0, handLazy:[], t:0,
         sound:true, seenHint:{}, won:false, story:{}, journal:[], orders:[] };
   for(const id of UPGRADE_IDS) G.up[id] = 0;
   for(const p of PADS) G.paid[p.id]=0;
@@ -390,19 +416,163 @@ function serveStand(a, dt){
 
 /* -------------------------------------------------------------- persistence */
 const SAVE_KEY = 'harvest-hero-v1';
-function save(){
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify({
-    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
+
+/* A save is a plain object. localStorage and the save file carry the same
+   thing, so anything that round-trips through one round-trips through both. */
+const START_COINS = 25;
+
+function saveData(){
+  return {
+    game:'harvest-hero', format:3,
+    savedAt:new Date().toISOString(), level:G.level,
+    coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands, handLazy:G.handLazy,
     sound:G.sound, seenHint:G.seenHint, won:G.won,
-    story:G.story, journal:G.journal, orders:G.orders })); }catch(e){}
+    story:G.story, journal:G.journal, orders:G.orders };
+}
+
+/* ---- save envelope -----------------------------------------------------
+   The payload is scrambled and stamped so a save cannot be edited in a text
+   editor. This is tamper-EVIDENCE, not security: everything needed to forge
+   a stamp is in this file, and anyone with the console can set G.coins
+   directly. It stops casual editing, which is all a client-side game can do.
+   The second line of defence is sanitiseSave(), which throws away any value
+   the game itself could never have produced.                              */
+const STAMP_KEY = [0x5a,0x1c,0x7e,0x33,0xb2,0x6d,0x94,0xc8,0x21,0x4f,0xe3,0x08,0x77,0xa5];
+const STAMP_SALT = 'hollowbrook-mill-turns-again';
+
+function stamp(str){
+  let h1 = 0xdeadbeef ^ 0x48484, h2 = 0x41c6ce57 ^ 0x48484;
+  const s = str + STAMP_SALT;
+  for(let i=0; i<s.length; i++){
+    const ch = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1>>>0)).toString(36);
+}
+function pack(json){
+  const bytes = new TextEncoder().encode(json);
+  let bin = '';
+  for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i] ^ STAMP_KEY[i % STAMP_KEY.length]);
+  return btoa(bin);
+}
+function unpack(b64){
+  const bin = atob(b64), bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i) ^ STAMP_KEY[i % STAMP_KEY.length];
+  return new TextDecoder().decode(bytes);
+}
+function encodeSave(obj){
+  const d = pack(JSON.stringify(obj));
+  return JSON.stringify({ game:'harvest-hero', format:3, d, s:stamp(d) });
+}
+/* -> { data } | { error } | { legacy } */
+function decodeSave(text){
+  let env;
+  try{ env = JSON.parse(text); }
+  catch(e){ return { error:'That is not a save file \u2014 check the whole thing was copied.' }; }
+  if(!env || typeof env !== 'object' || Array.isArray(env))
+    return { error:'That file does not contain a save.' };
+  if(typeof env.d !== 'string' || typeof env.s !== 'string'){
+    if(env.coins !== undefined || env.up) return { legacy:env };
+    return { error:'That does not look like a Harvest Hero save.' };
+  }
+  if(stamp(env.d) !== env.s)
+    return { error:'That save has been edited, so it will not load.' };
+  try{ return { data: JSON.parse(unpack(env.d)) }; }
+  catch(e){ return { error:'That save is damaged and cannot be read.' }; }
+}
+
+/* ---- keep only values the game could actually have produced ---- */
+const intIn = (v, lo, hi)=>{
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo;
+};
+function sanitiseSave(d){
+  const out = {};
+  out.up = {};
+  for(const pad of PADS) out.up[pad.id] = intIn((d.up||{})[pad.id], 0, pad.max);
+
+  out.earned = intIn(d.earned, 0, 1e15);
+  // every coin earned is added to `earned`, and spending only removes coins,
+  // so coins can never exceed the lifetime total plus the starting purse
+  out.coins  = intIn(d.coins, 0, out.earned + START_COINS);
+
+  // farmhands are exactly the times that pad was bought
+  out.hands  = out.up.hand;
+  out.handLazy = [];
+  for(let i=0;i<out.hands;i++){
+    const v = Array.isArray(d.handLazy) ? d.handLazy[i] : undefined;
+    out.handLazy.push(v === undefined ? Math.random() < 0.5 : !!v);   // older saves roll now
+  }
+
+  out.paid = {};
+  for(const pad of PADS){
+    const lvl  = out.up[pad.id];
+    const cost = Math.round(pad.cost * Math.pow(pad.mul, lvl));
+    out.paid[pad.id] = lvl >= pad.max ? 0 : intIn((d.paid||{})[pad.id], 0, Math.max(0, cost-1));
+  }
+
+  out.sound = (d.sound !== false);
+  out.won   = !!d.won;
+
+  const ids = STORY.map(c=>c.id);
+  out.story = {};
+  for(const id of ids) if((d.story||{})[id]) out.story[id] = 1;
+  out.journal = Array.isArray(d.journal) ? d.journal.filter(id=>ids.includes(id)) : [];
+  out.seenHint = (d.seenHint && typeof d.seenHint === 'object' && !Array.isArray(d.seenHint)) ? d.seenHint : {};
+
+  // orders keep their goods but never their payout: that is recomputed here
+  out.orders = [];
+  if(Array.isArray(d.orders)) for(const o of d.orders.slice(0,2)){
+    if(!o || typeof o !== 'object') continue;
+    const items = {}, need = {};
+    for(const k of ITEM_ORDER){
+      const q = intIn((o.items||{})[k], 0, 5000);
+      if(q > 0){ items[k] = q; need[k] = intIn((o.need||{})[k], 0, q); }
+    }
+    if(!Object.keys(items).length) continue;
+    let pay = 0;
+    for(const k in items) pay += ITEMS[k].price * items[k];
+    out.orders.push({ items, need, pay: Math.round(pay * ORDER_BONUS) });
+  }
+
+  /* Deliberately NOT checked: that the upgrade levels are affordable out of
+     `earned`. Computing that needs the cost table, which changes whenever the
+     game is rebalanced, so a farm played across a balance change fails it and
+     the player loses everything. The coins clamp above is the same idea
+     without that flaw: it follows from how coins move, not from any number
+     that might be retuned later. */
+  return out;
+}
+
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, encodeSave(saveData())); }catch(e){}
+}
+let saveNotice = null;
+function rejectStored(text, why){
+  // keep the bad blob rather than letting the next autosave bury it
+  try{ localStorage.setItem(SAVE_KEY + '-rejected', text); localStorage.removeItem(SAVE_KEY); }catch(e){}
+  saveNotice = why;
 }
 function load(){
-  let d=null; try{ d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); }catch(e){}
+  let text=null; try{ text = localStorage.getItem(SAVE_KEY); }catch(e){}
+  if(!text) return;
+  const r = decodeSave(text);
+  if(r.error){ rejectStored(text, r.error + ' Starting a new farm.'); return; }
+  // a farm already in progress from an older build is migrated, then re-stamped
+  const d = r.data || r.legacy;
   if(!d) return;
+  applySave(sanitiseSave(d));
+  if(r.legacy) save();
+}
+function applySave(d){
   G.coins=d.coins|0; G.earned=d.earned|0; G.hands=d.hands|0;
   Object.assign(G.up, d.up||{}); Object.assign(G.paid, d.paid||{});
   G.sound = d.sound!==false; G.seenHint = d.seenHint||{}; G.won=!!d.won;
   G.story = d.story||{}; G.journal = d.journal||[];
+  G.handLazy = Array.isArray(d.handLazy) ? d.handLazy.slice() : [];
 
   /* Saves from before the valley expanded: a bakery used to run on raw wheat,
      so grant the mill that now feeds it rather than stranding the player. */
@@ -412,7 +582,42 @@ function load(){
   for(const s of STATIONS) if(s.id!=='market') s.unlocked = (G.up[s.id]||0)>0;
   G.orders = Array.isArray(d.orders) && d.orders.length ? d.orders : [];
   refreshOrders();
-  for(let i=0;i<G.hands;i++) actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true));
+  for(let i=0;i<G.hands;i++){
+    if(G.handLazy[i] === undefined) G.handLazy[i] = Math.random() < 0.5;
+    actors.push(newActor(20+rnd(-1,1), 11+rnd(-1,1), true, G.handLazy[i]));
+  }
+}
+
+/* ---- save files -------------------------------------------------------
+   Download is blocked in some sandboxed embeds, so the same text is always
+   shown for copy/paste as well; either route restores the same farm.      */
+function saveFileName(){
+  return 'harvest-hero-level-' + G.level + '-' + new Date().toISOString().slice(0,10) + '.json';
+}
+function exportSave(){
+  save();
+  const text = encodeSave(saveData());
+  try{
+    const url = URL.createObjectURL(new Blob([text], {type:'application/json'}));
+    const a = document.createElement('a');
+    a.href = url; a.download = saveFileName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    return true;
+  }catch(e){ return false; }
+}
+function importSave(text){
+  const r = decodeSave(text);
+  if(r.error) return r.error;
+  if(r.legacy) return 'That save is from an older version and cannot be imported.';
+  const clean = sanitiseSave(r.data);
+  const keepSound = G.sound;
+  resetGame();
+  applySave(clean);
+  G.sound = keepSound;
+  const q = iso(player().x, player().y); cam.x = q.sx; cam.y = q.sy;
+  buildPills(); syncHUD(); save();
+  return null;
 }
 
 /* -------------------------------------------------------------- audio */
@@ -508,7 +713,7 @@ function collide(a){
 }
 
 function moveActor(a, dx, dy, mag, dt){
-  const sp = moveSpeed() * (a.hand?0.88:1) * mag;
+  const sp = moveSpeed() * (a.hand?0.5:1) * mag;    // hired help is not you
   const ax = dx*sp, ay = dy*sp;
   a.vx = lerp(a.vx, ax, 1-Math.pow(0.0008, dt));
   a.vy = lerp(a.vy, ay, 1-Math.pow(0.0008, dt));
@@ -559,7 +764,7 @@ function tryHarvest(a, dt){
     if(!a.hand) hint('bagfull', 'BAG FULL \u2014 go sell it!');
     a.cut = 0; return false;
   }
-  a.cut += dt * harvestRate() * (a.hand?0.8:1);
+  a.cut += dt * harvestRate() * (a.hand?0.45:1);
   if(a.cut < 1) return false;
   a.cut = 0;
 
@@ -641,6 +846,9 @@ function tryStations(a, dt){
 
       if(tr.mode==='out'){
         const it = tr.item;
+        // Farmhands must not lift finished goods: nothing they carry but wheat
+        // can be unloaded anywhere they walk, so a stray pie would strand them.
+        if(a.hand) continue;
         if(s.out<=0 || carried(a)>=actorCap(a)) continue;
         const step0 = flowStep(TRAY_CAP);
         while(a.ioT >= IO_INTERVAL && s.out>0 && carried(a)<actorCap(a)){
@@ -721,25 +929,67 @@ function buyPad(p){
     hint('open'+p.id, st.name+' OPEN \u2014 ' + (r ? ins+' \u2192 '+ITEMS[r.out].label.toLowerCase() : 'ready'), true);
   }
   if(p.id==='orchard') hint('openorchard','The orchard is planted \u2014 walk under the trees to pick apples', true);
-  if(p.id==='hand'  ){ G.hands++; actors.push(newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true));
-    hint('handdone','A farmhand joined! They work the wheat field for you.', true); }
+  if(p.id==='hand'  ){
+    G.hands++;
+    const hand = newActor(p.x+rnd(-1,1), p.y+rnd(-1,1), true);
+    G.handLazy.push(hand.lazy);
+    actors.push(hand);
+    hint('hand'+G.hands, hand.lazy
+      ? 'A farmhand joined \u2014 though this one yawned all the way here.'
+      : 'A farmhand joined! They work the wheat field for you.', true);
+  }
   save();
 }
 
 /* ------------------------------------------------------------ farmhand AI */
-function deliveryTarget(){
-  let best = null, bestFill = 1e9;
-  for(const st of STATIONS){
-    if(!st.unlocked || st.kind!=='make' || !st.recipe.in.wheat) continue;
-    const fill = st.bin.wheat + st.pend.wheat;
-    if(fill >= TRAY_CAP-2) continue;
-    if(fill < bestFill){ bestFill = fill; best = st.trays.find(t=>t.mode==='in' && t.item==='wheat'); }
+function deliveryTarget(a){
+  // only a wheat load belongs at a workshop; anything else goes to the market,
+  // which buys every good and can therefore never leave a hand holding something
+  if(a && a.carry.wheat > 0){
+    let best = null, bestFill = 1e9;
+    for(const st of STATIONS){
+      if(!st.unlocked || st.kind!=='make' || !st.recipe.in.wheat) continue;
+      const fill = st.bin.wheat + st.pend.wheat;
+      if(fill >= TRAY_CAP-2) continue;
+      if(fill < bestFill){ bestFill = fill; best = st.trays.find(t=>t.mode==='in' && t.item==='wheat'); }
+    }
+    if(best) return best;
   }
-  return best || station('market').trays[0];
+  return station('market').trays[0];
 }
 
 function updateHand(a, dt){
   a.think = (a.think||0) - dt;
+
+  /* Half of the farmhands you hire are lazy. They put in a decent stretch,
+     then down tools and sleep it off before getting up and carrying on. */
+  if(a.lazy){
+    if(a.state === 'nap'){
+      a.napT -= dt;
+      moveActor(a, 0, 0, 0, dt);
+      if(a.napT <= 0){ a.state = 'seek'; a.target = null; a.work = rnd(16,26); }
+      return;
+    }
+    a.work -= dt;
+    if(a.work <= 0){
+      a.state = 'nap'; a.napT = rnd(11,19);
+      a.target = null; a.tray = null; a.cut = 0;
+      const lost = carried(a);
+      if(lost > 0){                       // down tools, and the load goes with them
+        for(const k of ITEM_ORDER){
+          if(!a.carry[k]) continue;
+          const col = k==='wheat' ? '#f2cc3f' : k==='apple' ? '#d8402f' : '#efe3c6';
+          for(let i=0;i<Math.min(8, a.carry[k]);i++)
+            puffs.push({ x:a.x+rnd(-.5,.5), y:a.y+rnd(-.5,.5), z:rnd(.5,1.4),
+                         vx:rnd(-2.2,2.2), vy:rnd(-2.2,2.2), vz:rnd(1,3),
+                         t:0, life:rnd(.6,1.2), col, r:rnd(2.5,4.5) });
+          a.carry[k] = 0;
+        }
+        pops.push({ x:a.x, y:a.y, z:1.2, t:0, txt:'dropped '+lost, col:'#ffb0a0' });
+      }
+      return;
+    }
+  }
 
   if(a.state==='seek'){
     if(carried(a) >= actorCap(a)){ a.state='deliver'; a.target=null; a.think=0; }
@@ -765,8 +1015,13 @@ function updateHand(a, dt){
       } else moveActor(a,0,0,0,dt);
     }
   } else {
-    if(carried(a) <= 0){ a.state='seek'; a.target=null; a.think=0; return; }
-    if(!a.tray || a.think<=0){ a.think=1.2; a.tray = deliveryTarget(); }
+    if(carried(a) <= 0){ a.state='seek'; a.target=null; a.think=0; a.stuck=0; return; }
+    // if a load has not gone down in a while, stop trying to be clever about it
+    const load = carried(a);
+    a.stuck = (load === a.lastLoad) ? (a.stuck||0) + dt : 0;
+    a.lastLoad = load;
+    if(a.stuck > 10){ a.stuck = 0; a.tray = station('market').trays[0]; }
+    else if(!a.tray || a.think<=0){ a.think=1.2; a.tray = deliveryTarget(a); }
     const c = rectCenter(a.tray);
     const dx=c.x-a.x, dy=c.y-a.y, m=Math.hypot(dx,dy);
     if(m>0.2) moveActor(a, dx/m, dy/m, 1, dt);
@@ -1181,58 +1436,154 @@ function roundRect(x,y,w,h,r){
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 
+/* ---- putting things on a wall -------------------------------------------
+   A face is two ground corners plus the wall height. (u,v) runs along the
+   wall and up it, so a door or window is a parallelogram in screen space
+   and sits flat on the building instead of floating in front of it.      */
+const facePt = (P0,P1,H,u,v)=>[ lerp(P0.sx,P1.sx,u), lerp(P0.sy,P1.sy,u) - v*H ];
+function faceQuad(P0,P1,H,u0,u1,v0,v1){
+  return [ facePt(P0,P1,H,u0,v0), facePt(P0,P1,H,u1,v0),
+           facePt(P0,P1,H,u1,v1), facePt(P0,P1,H,u0,v1) ];
+}
+function drawDoor(P0,P1,H,u,hw,hv,col){
+  col = col || '#8a5a2b';
+  poly(faceQuad(P0,P1,H,u-hw,u+hw,0,hv), col, '#00000033', 2);
+  poly(faceQuad(P0,P1,H,u-hw*0.74,u+hw*0.74,0.02,hv*0.9), shade(col,-26));
+  const k = facePt(P0,P1,H,u+hw*0.45,hv*0.45);
+  ctx.fillStyle='#f2d791'; ctx.beginPath(); ctx.arc(k[0],k[1],2.8,0,6.29); ctx.fill();
+}
+function drawWindow(P0,P1,H,u,v,hw,hv){
+  poly(faceQuad(P0,P1,H,u-hw,u+hw,v-hv,v+hv), '#fdf7e6', '#00000022', 2);
+  poly(faceQuad(P0,P1,H,u-hw*0.74,u+hw*0.74,v-hv*0.72,v+hv*0.72), '#8ec6e6');
+  poly(faceQuad(P0,P1,H,u-hw*0.7,u-hw*0.05,v-hv*0.66,v+hv*0.64), 'rgba(255,255,255,.4)');
+  ctx.strokeStyle='#efe3c6'; ctx.lineWidth=2;
+  let a=facePt(P0,P1,H,u,v-hv*0.72), c=facePt(P0,P1,H,u,v+hv*0.72);
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(c[0],c[1]); ctx.stroke();
+  a=facePt(P0,P1,H,u-hw*0.74,v); c=facePt(P0,P1,H,u+hw*0.74,v);
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(c[0],c[1]); ctx.stroke();
+}
+
 function drawBuilding(s){
-  const b = s.b, H = 74, RH = 40;
+  const b = s.b;
+  const shape = s.shape || 'house';
+  const H  = shape==='mill' ? 84 : shape==='shed' ? 60 : 74;
+  const RH = shape==='mill' ? 44 : shape==='shed' ? 34 : 40;
+  const OV = 0.25;                                   // roof overhang, in tiles
+  const wallS = '#f3e6cb', wallE = '#dbcaa9';
+
   const N=iso(b.x,b.y), E=iso(b.x+b.w,b.y), S=iso(b.x+b.w,b.y+b.h), W=iso(b.x,b.y+b.h);
+  const rN=iso(b.x-OV,b.y-OV), rE=iso(b.x+b.w+OV,b.y-OV),
+        rS=iso(b.x+b.w+OV,b.y+b.h+OV), rW=iso(b.x-OV,b.y+b.h+OV);
   const up=(p,h)=>[p.sx, p.sy-h];
-  // shadow
-  ctx.globalAlpha=.25; ctx.fillStyle='#000';
-  poly([[N.sx,N.sy+6],[E.sx+8,E.sy+6],[S.sx,S.sy+8],[W.sx-8,W.sy+6]],'#000'); ctx.globalAlpha=1;
-  // walls
-  poly([up(W,0),up(S,0),up(S,H),up(W,H)], '#f0e2c6');          // front-left
-  poly([up(E,0),up(S,0),up(S,H),up(E,H)], '#d8c8a8');          // front-right
-  // door
-  const dc = iso(b.x, b.y+b.h/2);
-  ctx.fillStyle='#8a5a2b'; roundRect(dc.sx-16, dc.sy-58, 32, 52, 6); ctx.fill();
-  ctx.fillStyle='#6d4520'; roundRect(dc.sx-12, dc.sy-53, 24, 47, 5); ctx.fill();
-  // gable roof
-  const along = b.w>=b.h;
-  let R1,R2,f1,f2;
-  if(along){
-    R1=[iso(b.x,b.y+b.h/2).sx, iso(b.x,b.y+b.h/2).sy-H-RH];
-    R2=[iso(b.x+b.w,b.y+b.h/2).sx, iso(b.x+b.w,b.y+b.h/2).sy-H-RH];
-    f1=[up(N,H),up(E,H),R2,R1]; f2=[up(W,H),up(S,H),R2,R1];
-  } else {
-    R1=[iso(b.x+b.w/2,b.y).sx, iso(b.x+b.w/2,b.y).sy-H-RH];
-    R2=[iso(b.x+b.w/2,b.y+b.h).sx, iso(b.x+b.w/2,b.y+b.h).sy-H-RH];
-    f1=[up(N,H),up(W,H),R2,R1]; f2=[up(E,H),up(S,H),R2,R1];
-  }
-  poly(f1, shade(s.roof,-28), '#00000022', 2);
-  poly(f2, s.roof, '#00000022', 2);
-  ctx.globalAlpha=.16; poly(f2.map(p=>p), '#fff'); ctx.globalAlpha=1;
-  // what makes each building itself
   const mid = iso(b.x+b.w/2, b.y+b.h/2);
+
+  ctx.globalAlpha=.25;
+  poly([[N.sx,N.sy+6],[E.sx+8,E.sy+6],[S.sx,S.sy+8],[W.sx-8,W.sy+6]],'#000');
+  ctx.globalAlpha=1;
+
+  // ---- walls (only the two the camera can see)
+  poly([up(W,0),up(S,0),up(S,H),up(W,H)], wallS);
+  poly([up(E,0),up(S,0),up(S,H),up(E,H)], wallE);
+  if(shape==='mill'){                                // stone footing
+    poly(faceQuad(W,S,H,0,1,0,0.13), '#c3b8a2');
+    poly(faceQuad(E,S,H,0,1,0,0.13), '#ada291');
+  }
+
+  /* Roof and gable. The eaves overhang, but the GABLE ENDS must not: a roof
+     that oversails the end wall straddles the gable plane, and whichever way
+     it is ordered it buries the triangle. Ends flush, then the triangle is
+     drawn over the roof, then a barge board along the edge.               */
+  const along = b.w >= b.h;
+  let R1, R2, f1, f2, gTri;
+  if(along){
+    const eN=iso(b.x,b.y-OV), eE=iso(b.x+b.w,b.y-OV),
+          eS=iso(b.x+b.w,b.y+b.h+OV), eW=iso(b.x,b.y+b.h+OV);
+    const gw=iso(b.x,b.y+b.h/2), ge=iso(b.x+b.w,b.y+b.h/2);
+    R1=[gw.sx, gw.sy-H-RH]; R2=[ge.sx, ge.sy-H-RH];
+    f1=[up(eN,H),up(eE,H),R2,R1]; f2=[up(eW,H),up(eS,H),R2,R1];
+    gTri=[up(E,H), up(S,H), R2];
+  } else {
+    const eN=iso(b.x-OV,b.y), eE=iso(b.x+b.w+OV,b.y),
+          eS=iso(b.x+b.w+OV,b.y+b.h), eW=iso(b.x-OV,b.y+b.h);
+    const gn=iso(b.x+b.w/2,b.y), gs=iso(b.x+b.w/2,b.y+b.h);
+    R1=[gn.sx, gn.sy-H-RH]; R2=[gs.sx, gs.sy-H-RH];
+    f1=[up(eN,H),up(eW,H),R2,R1]; f2=[up(eE,H),up(eS,H),R2,R1];
+    gTri=[up(W,H), up(S,H), R2];
+  }
+
+  // ---- doors and windows, flat on the walls
+  if(shape === 'shed'){                              // coop: mostly door
+    drawDoor(E,S,H, 0.52, Math.min(0.32, 1.5/b.h), 0.76, '#7c4f26');
+    const hatch = facePt(W,S,H, 0.5, 0.82);          // pop-hole for the hens
+    ctx.fillStyle='#8fb7d8'; ctx.beginPath(); ctx.arc(hatch[0],hatch[1],7,0,6.29); ctx.fill();
+    ctx.strokeStyle='#fdf7e6'; ctx.lineWidth=2.5; ctx.stroke();
+  } else if(shape === 'mill'){
+    drawDoor(E,S,H, 0.5, 0.6/b.h, 0.46, '#7c4f26');
+    drawWindow(W,S,H, 0.28, 0.62, 0.36/b.w, 0.085);
+    drawWindow(W,S,H, 0.72, 0.62, 0.36/b.w, 0.085);
+    drawWindow(W,S,H, 0.5,  0.30, 0.36/b.w, 0.085);
+  } else {
+    drawDoor(E,S,H, 0.5, 0.55/b.h, 0.62);
+    if(b.h >= 5){
+      drawWindow(E,S,H, 0.17, 0.62, 0.4/b.h, 0.115);
+      drawWindow(E,S,H, 0.83, 0.62, 0.4/b.h, 0.115);
+    }
+    drawWindow(W,S,H, 0.24, 0.62, 0.42/b.w, 0.115);
+    drawWindow(W,S,H, 0.5,  0.62, 0.42/b.w, 0.115);
+    drawWindow(W,S,H, 0.76, 0.62, 0.42/b.w, 0.115);
+  }
+
+  // ---- roof last, so the eaves overhang everything below
+  poly(f1, shade(s.roof,-30), '#00000022', 2);
+  poly(f2, s.roof, '#00000022', 2);
+  ctx.strokeStyle = shade(s.roof,-46); ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(R1[0],R1[1]); ctx.lineTo(R2[0],R2[1]); ctx.stroke();
+  poly(gTri, shade(wallE, 12), '#00000018', 2);                 // the gable itself
+  ctx.strokeStyle = shade(s.roof,-14); ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(gTri[0][0],gTri[0][1]); ctx.lineTo(gTri[2][0],gTri[2][1]);
+  ctx.lineTo(gTri[1][0],gTri[1][1]); ctx.stroke();              // barge boards
+
   const topY = mid.sy - H - RH;
   if(s.motif==='sails'){
-    const cx = mid.sx, cy = topY - 34, ang = G.t*0.85;
+    // mounted on the gable end, just under the roof apex
+    let gApex, gBase;
+    if(along){
+      const ge = iso(b.x+b.w, b.y+b.h/2);
+      gApex = [ge.sx, ge.sy-H-RH];
+      gBase = [(E.sx+S.sx)/2, (E.sy+S.sy)/2 - H];
+    } else {
+      const gs = iso(b.x+b.w/2, b.y+b.h);
+      gApex = [gs.sx, gs.sy-H-RH];
+      gBase = [(W.sx+S.sx)/2, (W.sy+S.sy)/2 - H];
+    }
+    const cx = lerp(gBase[0], gApex[0], 0.66), cy = lerp(gBase[1], gApex[1], 0.66);
+    const ang = G.t*0.85;
     for(let i=0;i<4;i++){
       const a1 = ang + i*Math.PI/2;
-      const ex = cx + Math.cos(a1)*62, ey = cy + Math.sin(a1)*62;
+      const ex = cx + Math.cos(a1)*54, ey = cy + Math.sin(a1)*54;
       ctx.strokeStyle='#6b4a28'; ctx.lineWidth=7; ctx.lineCap='round';
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
       ctx.save(); ctx.translate(ex, ey); ctx.rotate(a1);
       ctx.fillStyle='#fdf6e6'; ctx.strokeStyle='#b9a37c'; ctx.lineWidth=2.5;
-      roundRect(-32, -13, 32, 26, 4); ctx.fill(); ctx.stroke();
+      roundRect(-28, -11, 28, 22, 4); ctx.fill(); ctx.stroke();
       ctx.strokeStyle='#d9cbaa'; ctx.lineWidth=2;
-      for(let k=1;k<4;k++){ ctx.beginPath(); ctx.moveTo(-32+k*8, -13); ctx.lineTo(-32+k*8, 13); ctx.stroke(); }
+      for(let k=1;k<4;k++){ ctx.beginPath(); ctx.moveTo(-28+k*7, -11); ctx.lineTo(-28+k*7, 11); ctx.stroke(); }
       ctx.restore();
     }
     ctx.fillStyle='#4a3418'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, 6.29); ctx.fill();
     ctx.fillStyle='#8a6a3c'; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 6.29); ctx.fill();
   } else if(s.motif==='silo'){
-    const q = iso(b.x+b.w, b.y+b.h*0.25);
-    ctx.fillStyle='#cfd6da'; roundRect(q.sx-2, q.sy-H-58, 26, 82, 6); ctx.fill();
-    ctx.fillStyle='#9fb0ba'; roundRect(q.sx-2, q.sy-H-58, 26, 16, 6); ctx.fill();
+    const q = iso(b.x+b.w+0.45, b.y+b.h*0.62);        // stands on the ground beside the barn
+    const sh = H + 52, sw = 30;
+    ctx.globalAlpha=.22; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(q.sx, q.sy, sw*0.62, sw*0.3, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+    ctx.fillStyle='#cfd6da'; roundRect(q.sx-sw/2, q.sy-sh, sw, sh, 5); ctx.fill();
+    ctx.fillStyle='#b9c3c9'; roundRect(q.sx+2, q.sy-sh, sw/2-2, sh, 5); ctx.fill();
+    ctx.strokeStyle='#aab6bd'; ctx.lineWidth=2;
+    for(let i=1;i<5;i++){ const yy=q.sy-sh*i/5;
+      ctx.beginPath(); ctx.moveTo(q.sx-sw/2+1, yy); ctx.lineTo(q.sx+sw/2-1, yy); ctx.stroke(); }
+    ctx.fillStyle='#8d9aa2';
+    ctx.beginPath(); ctx.ellipse(q.sx, q.sy-sh, sw/2, 11, 0, Math.PI, 0); ctx.fill();
   } else if(s.motif==='chimney'){
     const q = iso(b.x+b.w*0.3, b.y+b.h*0.3);
     ctx.fillStyle='#8d5a3c'; ctx.fillRect(q.sx-8, topY-26, 17, 40);
@@ -1247,7 +1598,7 @@ function drawBuilding(s){
   } else if(s.motif==='perch'){
     const q = iso(b.x+b.w*0.5, b.y+b.h*0.5);
     ctx.strokeStyle='#6b4a28'; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.moveTo(q.sx, topY+4); ctx.lineTo(q.sx, topY-22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(q.sx, topY+2); ctx.lineTo(q.sx, topY-20); ctx.stroke();
     ctx.fillStyle='#d9483f';
     poly([[q.sx-2,topY-30],[q.sx+18,topY-24],[q.sx-2,topY-18]], '#d9483f');
     ctx.fillStyle='#4a3418'; ctx.beginPath(); ctx.arc(q.sx-2, topY-24, 5, 0, 6.29); ctx.fill();
@@ -1427,8 +1778,10 @@ function drawPerson(a, sx, sy, tint, opts){
   opts = opts||{};
   const bob = Math.sin(a.bob*2)*3, step = Math.sin(a.bob*4);
   const flip = Math.cos(a.face) - Math.sin(a.face) < 0 ? -1 : 1;  // screen-facing
+  const napping = a.state === 'nap';
   ctx.globalAlpha=.25; ctx.fillStyle='#000';
-  ctx.beginPath(); ctx.ellipse(sx, sy, 15, 7.5, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.ellipse(sx, sy, napping?21:15, napping?9:7.5, 0,0,6.29); ctx.fill(); ctx.globalAlpha=1;
+  if(napping){ ctx.save(); ctx.translate(sx-9, sy+3); ctx.rotate(-1.28); ctx.translate(-sx, -sy); }
 
   // legs
   ctx.fillStyle='#3c5fa0';
@@ -1447,8 +1800,15 @@ function drawPerson(a, sx, sy, tint, opts){
   ctx.fillStyle=opts.hair||'#5b3a1c';
   ctx.beginPath(); ctx.arc(sx, hy-2, 11.5, Math.PI*1.03, Math.PI*2.05); ctx.fill();
   ctx.fillStyle='#3a2a1a';
-  ctx.beginPath(); ctx.arc(sx+flip*2-3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
-  ctx.beginPath(); ctx.arc(sx+flip*2+3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  if(napping){
+    ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1.8; ctx.lineCap='round';
+    for(const ex of [-3.4, 3.4]){
+      ctx.beginPath(); ctx.arc(sx+flip*2+ex, hy+1.6, 2.4, 0.35, Math.PI-0.35); ctx.stroke();
+    }
+  } else {
+    ctx.beginPath(); ctx.arc(sx+flip*2-3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx+flip*2+3.4, hy+2.5, 1.8, 0, 6.29); ctx.fill();
+  }
   ctx.strokeStyle='#b5745a'; ctx.lineWidth=1.6; ctx.lineCap='round';
   ctx.beginPath(); ctx.arc(sx+flip*2, hy+4.5, 3.2, 0.35, Math.PI-0.35); ctx.stroke();
 
@@ -1475,11 +1835,25 @@ function drawPerson(a, sx, sy, tint, opts){
       idx++;
     }
   }
-  if(total>SHOW){
+  if(total>SHOW && a.hand){
+    // farmhands only: their whole load, matching what the HUD shows for you
     const ty = sy-62+bob-SHOW*STEP-6;
     ctx.font='900 15px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillStyle='#fff'; ctx.strokeStyle='#00000099'; ctx.lineWidth=4;
-    ctx.strokeText('+'+(total-SHOW), sx, ty); ctx.fillText('+'+(total-SHOW), sx, ty);
+    ctx.strokeText(total, sx, ty); ctx.fillText(total, sx, ty);
+  }
+  if(napping){
+    ctx.restore();
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(let i=0;i<3;i++){
+      const t = (G.t*0.5 + i/3) % 1;
+      ctx.globalAlpha = Math.min(1, 2-2*t);
+      ctx.font = '900 ' + (11 + t*9) + 'px system-ui,sans-serif';
+      ctx.fillStyle='#fff'; ctx.strokeStyle='#00000077'; ctx.lineWidth=3;
+      const zx = sx + 16 + t*13, zy = sy - 24 - t*34;
+      ctx.strokeText('z', zx, zy); ctx.fillText('z', zx, zy);
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -1739,6 +2113,65 @@ function showChapter(c){
   sfx.levelup();
 }
 
+function openSaveFile(){
+  save();
+  const text = JSON.stringify(saveData(), null, 2);
+  modal('Your farm, as a file',
+    '<div id="savebox">'+
+      '<p>Download it to keep a backup, move it to another browser or device, '+
+      'or paste one back in below.</p>'+
+      '<textarea id="savetxt" spellcheck="false"></textarea>'+
+      '<div class="sbtns">'+
+        '<button class="sbtn" id="s-dl">DOWNLOAD</button>'+
+        '<button class="sbtn" id="s-copy">COPY</button>'+
+        '<button class="sbtn" id="s-file">LOAD FILE</button>'+
+        '<button class="sbtn go" id="s-paste">LOAD PASTED</button>'+
+      '</div>'+
+      '<div id="savemsg"></div>'+
+      '<input type="file" id="s-input" accept="application/json,.json" hidden>'+
+    '</div>', 'CLOSE');
+
+  const box = el('savetxt'); box.value = text;
+  const msg = el('savemsg');
+  const say = (t, ok)=>{ msg.textContent = t; msg.className = ok ? 's-ok' : 's-bad'; };
+
+  el('s-dl').onclick = ()=>{
+    const name = saveFileName();
+    // some embeds block downloads silently, so word this so it is true either way
+    say(exportSave()
+      ? 'Sent ' + name + ' to your downloads. Nothing there? This page blocks downloads \u2014 use COPY.'
+      : 'This page cannot start downloads \u2014 use COPY instead.', true);
+  };
+  el('s-copy').onclick = async ()=>{
+    try{ await navigator.clipboard.writeText(box.value); say('Copied to the clipboard.', true); }
+    catch(e){
+      box.focus(); box.select();
+      try{ document.execCommand('copy'); say('Copied to the clipboard.', true); }
+      catch(e2){ say('Copy blocked \u2014 select the text and copy it by hand.', false); }
+    }
+  };
+  el('s-file').onclick = ()=> el('s-input').click();
+  el('s-input').onchange = ev=>{
+    const f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{
+      const err = importSave(String(rd.result));
+      if(err) say(err, false);
+      else { closeModal(); sfx.buy();
+             hint('loaded','Farm loaded \u2014 level '+G.level+', $'+fmt(G.coins)+' in hand', true); }
+    };
+    rd.onerror = ()=> say('Could not read that file.', false);
+    rd.readAsText(f);
+  };
+  el('s-paste').onclick = ()=>{
+    const err = importSave(box.value);
+    if(err) say(err, false);
+    else { closeModal(); sfx.buy();
+           hint('loaded','Farm loaded \u2014 level '+G.level+', $'+fmt(G.coins)+' in hand', true); }
+  };
+}
+
 function openJournal(){
   let html = '<div id="jrn">';
   for(const c of STORY){
@@ -1749,14 +2182,27 @@ function openJournal(){
   modal('The Hollowbrook Journal', html, 'CLOSE');
 }
 
-function modal(title, html, btn){
+let modalConfirm = null;
+function closeModal(){ el('modal').classList.remove('on'); modalConfirm = null; }
+function modal(title, html, btn, opts){
+  opts = opts || {};
   el('m-title').textContent = title;
   el('m-body').innerHTML = html;
-  el('m-ok').textContent = btn||'OK';
+  const ok = el('m-ok'), cancel = el('m-cancel');
+  ok.textContent = btn || 'OK';
+  ok.classList.toggle('danger', !!opts.danger);
+  cancel.hidden = !opts.cancel;
+  if(opts.cancel) cancel.textContent = opts.cancel;
+  modalConfirm = opts.onConfirm || null;      // never survives the dialog that set it
   el('modal').classList.add('on');
 }
-el('m-ok').onclick = ()=>{ el('modal').classList.remove('on'); if(pendingReset){ pendingReset=false; doReset(); } };
-let pendingReset = false;
+el('m-ok').onclick = ()=>{ const fn = modalConfirm; closeModal(); if(fn) fn(); };
+el('m-cancel').onclick = closeModal;
+// tapping the dimmed area or pressing Escape backs out, never confirms
+el('modal').onclick = e=>{ if(e.target === el('modal')) closeModal(); };
+addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && el('modal').classList.contains('on')) closeModal();
+});
 
 function winModal(){
   modal('HARVEST FESTIVAL',
@@ -1766,14 +2212,17 @@ function winModal(){
 }
 
 el('b-journal').onclick = openJournal;
+el('b-save').onclick = openSaveFile;
 el('b-sound').onclick = ()=>{
   G.sound = !G.sound;
   el('b-sound').innerHTML = G.sound ? '&#128266;' : '&#128263;';
   save();
 };
 el('b-reset').onclick = ()=>{
-  pendingReset = true;
-  modal('Start a fresh farm?', '<p>This wipes your coins, upgrades and farmhands.</p>', 'WIPE IT');
+  modal('Start a fresh farm?',
+    '<p>This wipes your coins, upgrades, farmhands and story.</p>' +
+    '<p class="sub">There is no undo \u2014 take a copy with \u{1F4BE} first if you might want it back.</p>',
+    'WIPE IT', { cancel:'KEEP MY FARM', danger:true, onConfirm:doReset });
 };
 function doReset(){
   try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
@@ -1799,6 +2248,10 @@ function init(){
   syncHUD();
   hint('move','Drag anywhere to move. Sweep through the wheat!');
   checkStory();
+  if(saveNotice) modal('That save could not be loaded',
+    '<p>' + saveNotice + '</p>' +
+    '<p class="sub">The old file was kept aside rather than overwritten, so nothing is lost for good.</p>',
+    'START FRESH');
 }
 
 let last = performance.now();
