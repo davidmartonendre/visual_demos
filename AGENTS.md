@@ -104,6 +104,21 @@ deliberately.
 - With a keeper hired the stand pad changes mode (`serveStand()` → `stockStand()`)
   and `keeperServe()` works the queue from `G.stock`. Anything that touches the stand
   has to handle both.
+- Walking onto a tray moves the whole bag. The bag panel (`openBag()`) is the
+  deliberate version of the same thing: it offers itself within five tiles of the
+  counter or the stand, moves one good at a time, and has the farmhands' takings on
+  a button of its own. While it is open the player's `tryStations()` stands down,
+  or the load would be gone before the first button was pressed. Anything new at the
+  counter or the stand needs a row in it.
+- A workshop with more than one recipe it can make tosses a coin between them and
+  holds the choice until the batch is out. Taking them in order meant the cherry
+  version always won and plain pies were never made again once the grove was
+  planted. A plain pie needs an apple as well as an egg, so the pickers' fruit
+  feeds the oven and not only the jam pan.
+- Nothing that matters is drawn on a square the player stands on: their own body
+  covers it. The takings pile has its own square beside the counter (`TILL_PAD`),
+  and is drawn with the depth-sorted entities rather than with the trays, which go
+  down before the buildings.
 - Every level has a rank title from `RANKS`; `rankAt()` resolves any level, including
   ones above the top of the ladder. A banner fires only from `checkLevel()`, on a real
   level-up that lands exactly on a rank. Loading a save recomputes the level from

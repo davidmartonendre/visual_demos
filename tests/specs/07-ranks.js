@@ -26,6 +26,24 @@ module.exports = {
       t.ok(!!r.line, 'level ' + r.lv + ' has something to say');
     }
 
+    /* The ladder has to cover the long tail. A player past the old top kept
+       the same title for hundreds of levels with nothing left to climb to. */
+    t.gte(ladder.ranks[ladder.ranks.length-1].lv, 1000, 'the ladder runs to level 1000');
+    t.ok(ladder.ranks.some(r=>r.lv > 240), 'with titles above the old top of it');
+
+    /* Levelling gets harder as you climb, and the step from one level to the
+       next gets harder too. */
+    const curve = await t.get(()=>{ const out = [];
+      for(let n=1;n<=40;n++) out.push(levelReq(n)); return out; });
+    let rising = true, steepening = true;
+    for(let i=1;i<curve.length;i++){
+      if(curve[i] <= curve[i-1]) rising = false;
+      if(i>1 && (curve[i]-curve[i-1]) <= (curve[i-1]-curve[i-2])) steepening = false;
+    }
+    t.ok(rising, 'every level costs more to reach than the one before');
+    t.ok(steepening, 'and the gap between them widens as you climb');
+    t.eq(await t.get(()=>levelReq(0)), 0, 'and the bar starts empty at level one');
+
     /* A level-up that lands on a rank shows the banner. */
     const boundary = ladder.ranks[2];      // the first one you actually climb to
     await t.run(lv => { G.level = lv - 1; G.earned = levelReq(lv - 1) - 1; syncHUD(); }, boundary.lv);

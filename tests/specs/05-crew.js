@@ -38,18 +38,20 @@ module.exports = {
     t.eq(Object.keys(jobs.picked).filter(k=>k!=='apple' && k!=='cherry').length, 0,
          'a picker only carries fruit');
 
-    /* Fruit has somewhere to go: the jam kitchen takes both kinds, and a
-       picker must never be left holding something it cannot deliver. */
+    /* Fruit has somewhere to go: the jam kitchen takes both kinds and the
+       bakery takes apples, and a picker must never be left holding something
+       it cannot deliver. */
     await t.run(()=>{ const p = actors[1];
       p.carry = emptyBag(); p.carry.apple = 8; p.state = 'deliver'; p.tray = null;
       p.think = 0; p.stuck = 0; p.lastLoad = -1;
-      const j = station('jam'); j.bin = emptyBag(); j.pend = emptyBag(); j.out = emptyBag(); });
+      for(const id of ['jam','bakery']){ const s = station(id);
+        s.bin = emptyBag(); s.pend = emptyBag(); s.out = emptyBag(); } });
     await t.tick(60);
     // it will be back among the trees with a fresh load by now, so measure
     // what arrived rather than what it happens to be holding
-    const delivered = await t.get(()=>{ const j = station('jam');
-      return j.bin.apple + j.pend.apple + j.out.jam * 3; });
-    t.gte(delivered, 8, 'a picker gets its apples to the jam kitchen');
+    const delivered = await t.get(()=>{ const j = station('jam'), b = station('bakery');
+      return j.bin.apple + j.pend.apple + j.out.jam * 3 + b.bin.apple + b.pend.apple; });
+    t.gte(delivered, 8, 'a picker gets its apples to a kitchen that wants them');
 
     /* The keeper: hired for the stand, and it stays there. */
     await t.run(()=>{ G.up.keeper = 1; G.stock = emptyBag(); G.coins = 0; G.earned = 0;

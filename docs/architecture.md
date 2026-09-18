@@ -3,7 +3,7 @@
 This is the map you want open when you change something. It is written for
 someone who can read code but has never worked on a game before.
 
-Everything is `index.html` — 2,855 lines: CSS, markup and one long script. Nothing
+Everything is `index.html` — about 3,050 lines: CSS, markup and one long script. Nothing
 is imported, nothing is bundled, there is no framework. That was the right call to
 get a game working; the cost is that the whole program shares one scope, so any
 name is reachable from anywhere and a rename can break something 1,500 lines away
@@ -14,22 +14,22 @@ about living with it today.
 
 | Lines | What | Change it when |
 |---|---|---|
-| 9–154 | CSS for the HUD, modals, banners | anything on top of the canvas looks wrong |
-| 156–196 | markup: the canvas plus the HUD overlay | you add a button or a panel |
-| 199–220 | maths helpers, `iso()`, `fmt()` | almost never |
-| 221–367 | **the world tables** — `ITEMS`, `PATCHES`, `STATIONS`, `STALL`, `STAND`, `BOARD`, `COSMETICS`, `PADS` | most gameplay changes |
-| 368–421 | game state: `resetGame()`, `newActor()`, the balance formulas | tuning |
-| 422–569 | villagers, the queue, the farm stand, the stall keeper | anything about buyers |
-| 570–800 | saving: `saveData`, `applySave`, `sanitiseSave`, the file envelope | a new field has to survive a reload |
-| 801–864 | sound and input | controls |
-| 865–1570 | **the simulation** — harvesting, stations, pads, farmhand AI, story, orders, party, `update()` | behaviour |
-| 1571–2561 | **the rendering** — ground, crops, trees, buildings, items, people, `draw()` | how it looks |
-| 2562–2855 | HUD sync, modals, `init()`, the frame loop | menus and screens |
+| 9–174 | CSS for the HUD, the bag panel, modals, banners | anything on top of the canvas looks wrong |
+| 177–221 | markup: the canvas plus the HUD overlay | you add a button or a panel |
+| 229–246 | maths helpers, `iso()`, `fmt()` | almost never |
+| 247–405 | **the world tables** — `ITEMS`, `PATCHES`, `STATIONS`, `STALL`, `STAND`, `BOARD`, `COSMETICS`, `PADS` | most gameplay changes |
+| 406–459 | game state: `resetGame()`, `newActor()`, the balance formulas | tuning |
+| 460–607 | villagers, the queue, the farm stand, the stall keeper | anything about buyers |
+| 608–838 | saving: `saveData`, `applySave`, `sanitiseSave`, the file envelope | a new field has to survive a reload |
+| 839–904 | sound and input | controls |
+| 905–1640 | **the simulation** — harvesting, stations, pads, farmhand AI, story, orders, party, `update()` | behaviour |
+| 1641–2650 | **the rendering** — ground, crops, trees, buildings, items, people, `draw()` | how it looks |
+| 2651–3047 | HUD sync, the bag panel, modals, `init()`, the frame loop | menus and screens |
 
 Two functions matter more than the rest:
 
-- **`update(dt)`** (1507) runs the world forward by `dt` seconds. It never draws.
-- **`draw()`** (2472) paints the current state. It never changes anything.
+- **`update(dt)`** (1575) runs the world forward by `dt` seconds. It never draws.
+- **`draw()`** (2557) paints the current state. It never changes anything.
 
 That split is the single most important convention in the file. Keep it. It is why
 the test suite can simulate ten minutes of farming in 40 milliseconds — it calls
@@ -41,15 +41,16 @@ The valley is described, not coded. A workshop is one entry in `STATIONS` and on
 in `PADS` with a matching `id`; `buyPad()` unlocks it by name with no other change.
 
 ```js
-{ id:'bakery', name:'BAKERY', x:14.0, y:16.0, w:3.2, h:2.8, shape:'house',
-  recipes:[ {in:{cherry:3, flour:2}, out:{cherrypie:1}, time:2.2},
-            {in:{flour:2, egg:2},    out:{pie:1},       time:2.0} ],
+{ id:'bakery', name:'BAKERY', kind:'make', b:{x:3,y:35,w:7,h:5}, shape:'house',
+  recipes:[ { in:{flour:1, cherry:2},       out:'cherrypie', time:3.0 },
+            { in:{flour:1, egg:1, apple:1}, out:'pie',       time:2.6 } ],
   ... }
 ```
 
-Recipes are tried in order, so the cherry version wins whenever there are cherries.
-This is why the cherry grove upgrades the bakery without any code knowing about
-cherries specifically.
+A workshop tosses a coin between the recipes it can make at that moment, and
+holds the choice until the batch comes out. Taking them in order meant the
+cherry version always won: the day the grove was planted, plain pies stopped
+being made at all and the apples piled up with nowhere to go.
 
 The same is true of `ITEMS` + `ITEM_ORDER` (every good), `PATCHES` (every crop),
 `PADS` (every upgrade), `RANKS` (every title), `STORY` (every chapter) and
@@ -58,15 +59,18 @@ The same is true of `ITEMS` + `ITEM_ORDER` (every good), `PATCHES` (every crop),
 ## Recipes
 
 ### Change a price, a cost or a rate
-Prices live in `ITEMS` (229). Upgrade costs are `cost` × `mul` per level in `PADS`
-(332) — `padCost()` does the maths. Everything else is a one-line formula at
-371–380: carry capacity, harvest speed, yield, regrowth, walk speed. Change a
-number, reload, play. Then run the tests.
+Prices live in `ITEMS` (254). Upgrade costs are `cost` × `mul` per level in `PADS`
+(370) — `padCost()` does the maths. Everything else is a one-line formula at
+409–420: carry capacity (capped at 400, and a hired hand at 80), harvest speed,
+yield, regrowth, walk speed. A patch can slow the player down in it with
+`pickMul` — the groves use 0.5, and it multiplies the scythe rather than
+capping it. `levelReq()` (1562) is what a level costs in lifetime earnings.
+Change a number, reload, play. Then run the tests.
 
 ### Add a good
-1. Add its id to `ITEM_ORDER` (228) and a row to `ITEMS` (229) with `label`,
+1. Add its id to `ITEM_ORDER` (253) and a row to `ITEMS` (254) with `label`,
    `price` and `pill`.
-2. Give it a case in `drawItem()` (2027) so it can be drawn in a hand, on a tray
+2. Give it a case in `drawItem()` (2095) so it can be drawn in a hand, on a tray
    and on the stall.
 3. Make something produce it: a recipe in `STATIONS`, or a `PATCHES` entry.
 
@@ -85,8 +89,13 @@ negative. `tests/specs/01-data.js` exists to catch exactly that.
 
 ### Add an upgrade
 A `PADS` row plus wherever the number is read. If it should raise a cap, put it in
-the formula block at 371–380 rather than scattering `G.up.whatever` through the
+the formula block at 409–420 rather than scattering `G.up.whatever` through the
 simulation.
+
+### Add a rank
+A row in `RANKS` (1507), in level order. The ladder runs to 1000; `rankAt()`
+resolves any level above the top of it, and a banner fires only from
+`checkLevel()`, never from a save being loaded.
 
 ## The traps
 
@@ -109,6 +118,12 @@ These are all bugs that actually happened here.
 - **Idle behaviour has to look deliberate.** Lazy farmhands nap lying down with
   z's. The same pause without the animation reads as the bug above, and was
   reported as one.
+- **Nothing that matters goes on a square the player stands on.** The
+  farmhands' takings were drawn on the SELL tray, which is exactly where you
+  stand to collect them, so your own body covered the money and it looked as
+  though the hands had earned nothing. The pile has its own square now
+  (`TILL_PAD`) and is drawn with the depth-sorted entities — the trays go down
+  before the buildings, so anything drawn with them ends up under a roof.
 - **`sanitiseSave()` must not depend on the balance.** Clamp against things that
   follow from the mechanics — an upgrade's `max`, coins ≤ lifetime earned. Never
   against the cost table: prices get retuned, and a farm played on the old numbers
@@ -118,9 +133,14 @@ These are all bugs that actually happened here.
 
 ```sh
 open index.html          # play it
-node tests/run.js        # 431 checks, ~7 seconds
+node tests/run.js        # 512 checks, ~7 seconds
 node tests/run.js ranks  # just the specs whose name matches
 ```
+
+The page's own frame loop keeps running between one `page.evaluate` and the
+next, so a spec that sets a bag down on a tray in one call and reads it in the
+next may find it already sold. Set the position and the bag in the same call as
+the thing under test.
 
 Run the tests before you push. Most checks exist because the thing they check was
 broken once, and the comment above such a check says which bug. Read that comment
