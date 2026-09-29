@@ -7,11 +7,20 @@ deliberately.
 - The entire game is `index.html`: markup, CSS and JS in one file.
 - To run it, open `index.html`. Do not add a dev server, bundler or dependency
   unless asked — "no build step" is a feature of this project.
-- The one exception is `tests/`, which needs Playwright and nothing else. There is
-  no `package.json` anywhere and there must not be: the Azure deploy uploads the
-  repo root as-is, and a root `package.json` makes Oryx treat the site as a Node
-  app and fail the build looking for a build script.
-- **Run `node tests/run.js` before you push.** ~400 checks in under ten seconds
+- **There must be no `package.json` in the repo root.** The Azure deploy uploads
+  the root as-is, and a root `package.json` makes Oryx treat the site as a Node
+  app and fail the build hunting for a build script. The workflow even deletes
+  the one `npm install` leaves behind. The rule is about the root: `tests/` needs
+  Playwright and nothing else, and `mobile/` has a `package.json` of its own for
+  the Capacitor shell, which Oryx never looks at. Keep it that way — do not add
+  one at the root, and do not give the game a dependency.
+- `mobile/` wraps this same file in an Android app; see `mobile/README.md`. The
+  game stays the source: `mobile/sync.mjs` copies `index.html` into `mobile/www/`
+  on every build, and refuses to run if the file no longer has exactly one bare
+  `<script>`, which is where it injects the native bridge. The release build
+  compresses but deliberately leaves top-level names alone, so the whole suite
+  runs against the file that actually ships (`npm run test:build`).
+- **Run `node tests/run.js` before you push.** ~550 checks in under twenty seconds
   against the real file. Most of them exist because the thing they check was broken
   once, and the comment above such a check says so — read it before deciding a
   failure is the test's fault. When you fix a bug, add the check that would have
@@ -89,6 +98,32 @@ deliberately.
   stamped, so editing a save in a text editor makes it fail to load. Treat this as
   tamper evidence only — the key is in this file and the console can edit `G`
   directly. Never describe it as security.
+- **A purchase is never in a save.** An APK is a zip and this file is inside it,
+  so anyone can forge a save that passes the stamp. The defence is not a better
+  lock — the key ships with the lock — but a save with nothing worth forging in
+  it. `ENT` holds what the player has bought; `saveData()` never writes it,
+  `applySave()` never restores it, and `refreshEntitlements()` asks the store
+  afresh on every boot. `adsOff()` is the only question the ad layer gets to ask.
+  A cracked save then buys a cheater coins in a single-player farming game, which
+  costs nothing. Adding a leaderboard or selling coins for money would change
+  that; both are worth refusing anyway.
+- `sanitiseSave()` builds its result field by field and must keep doing so. Never
+  `Object.assign` the incoming save wholesale — that is how a forged key reaches
+  something the game later trusts.
+- **`STORE` owns where the bytes go.** `localStorage` is synchronous and a phone's
+  native store is not, so the async lives only at the edges: `prime()` once in
+  `boot()`, a queued push after each write. `save()` and `load()` stay
+  synchronous, which is what lets a spec round-trip a farm inside one
+  `page.evaluate()`. Three things hold: the native store answers the read while
+  `localStorage` always gets a mirror copy, writes queue rather than overlap (two
+  in flight can land out of order and leave the *older* farm on disk), and the
+  frame loop does not start until `prime()` resolves — otherwise a fresh farm
+  shows for a frame and the autosave buries the real one. `window.BOOTED` says
+  the world is up; the tests wait on it rather than on `G` alone.
+- `resolveSave()` merges two devices for the cloud save that is coming. `earned`
+  only ever goes up, so the bigger lifetime total is the longer-played farm; the
+  clock only breaks a tie, because a player who fixes their timezone should not
+  lose an afternoon. Keep it pure — no globals, no I/O.
 - `sanitiseSave()` is the real defence and must stay balance-independent. Clamp using
   bounds that follow from the game's mechanics (upgrade `max`, coins <= earned +
   START_COINS, payouts recomputed from goods), never from the cost table: costs are

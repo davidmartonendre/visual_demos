@@ -1,0 +1,10 @@
+node_modules/
+
+# Build output: sync.mjs writes it from ../index.html on every build, so the
+# copy in here is never the source of anything.
+www/index.html
+
+# Capacitor generates this on `npx cap add android`. Once you have set the
+# icons, the signing config and the manifest by hand, delete this line and
+# commit it -- those are not generated and losing them costs an afternoon.
+android/

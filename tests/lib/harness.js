@@ -14,7 +14,11 @@
 const path = require('path');
 const fs = require('fs');
 
-const GAME = 'file://' + path.resolve(__dirname, '..', '..', 'index.html');
+/* The repo's index.html by default. HH_GAME points the whole suite at another
+   copy -- the mobile build uses it to check the minified file that actually
+   ships still passes all of this. */
+const GAME = 'file://' + path.resolve(__dirname, '..', '..',
+                                      process.env.HH_GAME || 'index.html');
 
 /* Playwright is not vendored -- this repo has no package manager by design.
    Look where a global install puts it, and say so plainly if it is absent. */
