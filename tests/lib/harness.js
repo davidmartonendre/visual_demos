@@ -83,7 +83,9 @@ async function withPage(browser, fn){
   page.on('pageerror', e => t.errors.push('uncaught: ' + e.message));
   page.on('console', m => { if(m.type()==='error') t.errors.push('console: ' + m.text()); });
   await page.goto(GAME);
-  await page.waitForFunction(()=> typeof G !== 'undefined' && !!G);
+  /* The store is primed before the farm loads, so boot is async now. Waiting
+     on G alone caught the page mid-boot and specs raced the first autosave. */
+  await page.waitForFunction(()=> typeof G !== 'undefined' && !!G && window.BOOTED === true);
   try { await fn(t); }
   catch(e){ if(!(e instanceof Bail)) t.checks.push({ ok:false, msg:'threw: ' + e.message }); }
   await page.close();

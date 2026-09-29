@@ -590,6 +590,89 @@ function serveStand(a){
 /* -------------------------------------------------------------- persistence */
 const SAVE_KEY = 'harvest-hero-v1';
 
+/* ---- where the bytes live ----------------------------------------------
+   localStorage is synchronous; a phone's native store is not. Rather than
+   make the whole game async for it, the async lives only at the edges:
+   prime() once at boot, and a queued push after each write. save() and
+   load() stay synchronous, which is what lets a spec round-trip a farm
+   inside one page.evaluate().
+
+   The native store, when there is one, is the authority on read. We still
+   mirror every write into localStorage: if the native call fails the
+   WebView copy is the fallback, and a browser has nothing else.          */
+const STORE = {
+  native: null,      // the shell's bridge, once prime() has proved it works
+  cache: null,       // last text seen by the native store; null = ask localStorage
+  tail: Promise.resolve(),
+
+  prime(){
+    const n = typeof window !== 'undefined' ? window.HH_NATIVE : null;
+    if(!n || typeof n.get !== 'function') return Promise.resolve(false);
+    return Promise.resolve(n.get(SAVE_KEY)).then(v => {
+      this.native = n;
+      this.cache = (typeof v === 'string' && v) ? v : null;
+      return true;
+    }).catch(() => false);   // no native store: carry on with localStorage
+  },
+
+  read(){
+    if(this.native && this.cache !== null) return this.cache;
+    try{ return localStorage.getItem(SAVE_KEY); }catch(e){ return null; }
+  },
+
+  write(text){
+    if(this.native){
+      this.cache = text;
+      this.push(n => n.set(SAVE_KEY, text));
+    }
+    try{ localStorage.setItem(SAVE_KEY, text); }catch(e){}
+  },
+
+  clear(){
+    if(this.native){ this.cache = null; this.push(n => n.remove(SAVE_KEY)); }
+    try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  },
+
+  /* A bad blob is kept aside rather than letting the next autosave bury it. */
+  reject(text){
+    try{ localStorage.setItem(SAVE_KEY + '-rejected', text); }catch(e){}
+    this.clear();
+  },
+
+  /* Writes are queued, never parallel: two overlapping set() calls can land
+     out of order and leave the older farm on disk. */
+  push(fn){
+    const n = this.native;
+    this.tail = this.tail.then(() => fn(n)).catch(() => {});
+    return this.tail;
+  },
+
+  /* For a spec, or a shell that wants the disk settled before it backgrounds. */
+  flush(){ return this.tail; },
+};
+
+/* ---- entitlements -------------------------------------------------------
+   What the player has BOUGHT, which is deliberately NOT part of a save.
+   A save is a file the player can edit; a purchase has to come from the
+   store, so it is asked for afresh on every boot and never restored from
+   disk. saveData() must never learn about these keys, and sanitiseSave()
+   builds its result from scratch precisely so a forged one cannot smuggle
+   one in. Ads, when they arrive, ask adsOff() and nothing else.          */
+const ENTITLEMENTS = ['noads'];
+let ENT = {};
+const owns = id => !!ENT[id];
+const adsOff = () => owns('noads');
+
+function refreshEntitlements(){
+  const n = typeof window !== 'undefined' ? window.HH_NATIVE : null;
+  if(!n || typeof n.entitlements !== 'function'){ ENT = {}; return Promise.resolve(ENT); }
+  return Promise.resolve(n.entitlements()).then(list => {
+    ENT = {};
+    if(Array.isArray(list)) for(const id of list) if(ENTITLEMENTS.includes(id)) ENT[id] = 1;
+    return ENT;
+  }).catch(() => { ENT = {}; return ENT; });   // offline: sell nothing, grant nothing
+}
+
 /* A save is a plain object. localStorage and the save file carry the same
    thing, so anything that round-trips through one round-trips through both. */
 const START_COINS = 25;
@@ -665,6 +748,11 @@ const intIn = (v, lo, hi)=>{
   return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo;
 };
 function sanitiseSave(d){
+  /* `out` is built from scratch and every field is named below. That is what
+     keeps a forged save from smuggling in a key the game later trusts --
+     notably an entitlement: a purchase comes from the store, never from a
+     file the player can edit. Copy fields in one at a time; never Object
+     .assign the input wholesale. */
   const out = {};
   out.up = {};
   for(const pad of PADS) out.up[pad.id] = intIn((d.up||{})[pad.id], 0, pad.max);
@@ -734,17 +822,14 @@ function sanitiseSave(d){
   return out;
 }
 
-function save(){
-  try{ localStorage.setItem(SAVE_KEY, encodeSave(saveData())); }catch(e){}
-}
+function save(){ STORE.write(encodeSave(saveData())); }
 let saveNotice = null;
 function rejectStored(text, why){
-  // keep the bad blob rather than letting the next autosave bury it
-  try{ localStorage.setItem(SAVE_KEY + '-rejected', text); localStorage.removeItem(SAVE_KEY); }catch(e){}
+  STORE.reject(text);
   saveNotice = why;
 }
 function load(){
-  let text=null; try{ text = localStorage.getItem(SAVE_KEY); }catch(e){}
+  const text = STORE.read();
   if(!text) return;
   const r = decodeSave(text);
   if(r.error){ rejectStored(text, r.error + ' Starting a new farm.'); return; }
@@ -754,6 +839,24 @@ function load(){
   applySave(sanitiseSave(d));
   if(r.legacy) save();
 }
+/* ---- two devices, one farm ---------------------------------------------
+   Cloud save is a sync store, not an authority: both phones write whatever
+   they hold, so a pull can turn up a farm that is not the one on this
+   screen. `earned` only ever goes up, which makes it the one honest
+   yardstick -- the bigger lifetime total is the longer-played farm. The
+   timestamp only breaks a tie, because a clock can be wrong and a player
+   who fixes their timezone should not lose an afternoon.
+
+   Pure on purpose: no globals, no I/O, so a spec can hammer it.          */
+function resolveSave(a, b){
+  if(!a || typeof a !== 'object') return b && typeof b === 'object' ? b : null;
+  if(!b || typeof b !== 'object') return a;
+  const ea = Number(a.earned) || 0, eb = Number(b.earned) || 0;
+  if(ea !== eb) return ea > eb ? a : b;
+  const ta = Date.parse(a.savedAt || '') || 0, tb = Date.parse(b.savedAt || '') || 0;
+  return tb > ta ? b : a;          // a tie keeps the farm already in hand
+}
+
 function applySave(d){
   G.coins=d.coins|0; G.earned=d.earned|0; G.hands=d.hands|0;
   Object.assign(G.up, d.up||{}); Object.assign(G.paid, d.paid||{});
@@ -3026,7 +3129,7 @@ el('b-reset').onclick = ()=>{
     'WIPE IT', { cancel:'KEEP MY FARM', danger:true, onConfirm:doReset });
 };
 function doReset(){
-  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  STORE.clear();
   const snd = G.sound;
   resetGame(); G.sound = snd;
   buildDecor();
@@ -3038,9 +3141,9 @@ function doReset(){
    BOOT
    ===================================================================== */
 function init(){
-  let raw=null; try{ raw = localStorage.getItem(SAVE_KEY); }catch(e){}
+  const raw = STORE.read();
   resetGame();
-  if(raw){ try{ localStorage.setItem(SAVE_KEY, raw); }catch(e){} load(); }
+  if(raw){ STORE.write(raw); load(); }
   buildDecor();
   resize();
   const p = iso(player().x, player().y); cam.x=p.sx; cam.y=p.sy;
@@ -3053,6 +3156,7 @@ function init(){
     '<p>' + saveNotice + '</p>' +
     '<p class="sub">The old file was kept aside rather than overwritten, so nothing is lost for good.</p>',
     'START FRESH');
+  window.BOOTED = true;
 }
 
 let last = performance.now();
@@ -3063,8 +3167,22 @@ function frame(now){
   draw();
   requestAnimationFrame(frame);
 }
-init();
-requestAnimationFrame(frame);
+
+/* The native store answers asynchronously, so the farm cannot load until it
+   has. Starting the loop first would show a fresh farm for a frame and then
+   let the autosave bury the real one, so both wait. In a browser there is no
+   native store and prime() resolves on the spot.
+
+   BOOTED says the world is up; the tests wait on it rather than on a timer. */
+function boot(){
+  STORE.prime().then(() => {
+    init();
+    refreshEntitlements();       // purchases come from the store, not the save
+    last = performance.now();
+    requestAnimationFrame(frame);
+  });
+}
+boot();
 </script>
 </body>
 </html>
