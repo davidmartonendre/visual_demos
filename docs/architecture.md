@@ -153,6 +153,11 @@ has the commands. Three things about it are worth knowing from in here:
   `HH_GAME=mobile/www/index.html node tests/run.js`, or `npm run test:build`
   from `mobile/`. A build you can test beats a build that is slightly harder to
   read.
+- **The phone's behaviour lives in the game where it can be tested.**
+  `goBack()` decides what Android's back button does; the bridge only routes
+  the event to it and quits if it comes back false. Same for the icon:
+  `mobile/icon.mjs` draws it by calling the game's own `drawItem('wheat')`
+  rather than shipping a picture that can drift.
 - **`mobile/www/hh-native.js` defines nothing at all if the plugin is missing**,
   rather than defining something broken. The game then finds no bridge and stays
   on `localStorage`, which is exactly what a browser does.

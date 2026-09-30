@@ -3109,6 +3109,28 @@ addEventListener('keydown', e=>{
   if(e.key === 'Escape' && el('modal').classList.contains('on')) closeModal();
 });
 
+/* ---- Android's back button ---------------------------------------------
+   A phone's back button does not go anywhere by default: with nothing
+   listening it closes the app, so a player mid-harvest taps it and the farm
+   goes off the screen. Every panel in this game -- the bag, the shop, the
+   journal, the ranks, a story card -- is the one #modal, so backing out is
+   always the same move: close what is open, and only offer to leave when
+   nothing is.
+
+   Returns true when it handled the press. The shell's bridge quits on false,
+   which cannot happen in a browser: there, with nothing open, back does
+   nothing at all rather than offering a LEAVE button that leads nowhere. */
+function goBack(){
+  if(el('modal').classList.contains('on')){ closeModal(); return true; }
+  const n = typeof window !== 'undefined' ? window.HH_NATIVE : null;
+  if(!n || typeof n.exit !== 'function') return false;
+  save();                       // never ask the question with the farm unsaved
+  modal('Leave the farm?',
+    '<p>Everything is saved. The valley will be exactly as you left it.</p>',
+    'LEAVE', { cancel:'KEEP PLAYING', onConfirm:()=>{ try{ n.exit(); }catch(e){} } });
+  return true;
+}
+
 function winModal(){
   modal('HARVEST FESTIVAL',
     '<p>Hollowbrook is a working valley again \u2014 the mill turning, the ovens lit, '+

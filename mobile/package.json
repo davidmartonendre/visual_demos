@@ -10,14 +10,18 @@
     "android": "npm run sync && npx cap sync android && npx cap open android",
     "android:release": "npm run sync:release && npx cap sync android && npx cap open android",
     "test:build": "npm run sync:release && node --run test:built",
-    "test:built": "cd .. && HH_GAME=mobile/www/index.html node tests/run.js"
+    "test:built": "cd .. && HH_GAME=mobile/www/index.html node tests/run.js",
+    "icons": "node icon.mjs",
+    "assets": "node icon.mjs && npx @capacitor/assets generate --android"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.2",
     "@capacitor/preferences": "^8.0.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.2",
     "terser": "^5.51.2"
   }

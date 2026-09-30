@@ -8,3 +8,8 @@ www/index.html
 # icons, the signing config and the manifest by hand, delete this line and
 # commit it -- those are not generated and losing them costs an afternoon.
 android/
+
+# Generated from the game's own art by icon.mjs, so they are build output like
+# www/index.html rather than source. `npm run icons` rebuilds them; the source
+# is drawItem('wheat') in ../index.html.
+assets/

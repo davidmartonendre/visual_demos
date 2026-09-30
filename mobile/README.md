@@ -38,7 +38,9 @@ press ▶ again.
 | `npm run sync:release` | the same, compressed and stripped of comments |
 | `npm run android` | sync, then open Android Studio |
 | `npm run android:release` | release sync, then open Android Studio |
-| `npm run test:build` | **build the release file and run all 563 checks against it** |
+| `npm run icons` | redraw the app icon and splash from the game's own art |
+| `npm run assets` | that, then generate every Android density from them |
+| `npm run test:build` | **build the release file and run all 586 checks against it** |
 
 That last one is the point of the arrangement. The release build compresses
 the game but deliberately leaves top-level names alone, so the whole suite
@@ -109,22 +111,48 @@ for, and that is not built yet.
   **out of the Kids category** unless you mean it: a child-directed listing
   bans personalised ads and takes the rate down with it.
 
-## Still missing from the shell
+## One thing to do by hand
 
-Things a browser does not need and a phone does. None is hard; all are
-invisible until you are holding the device.
+`npx cap add android` generates `android/`, and one line in it is worth
+setting before you build. The game is drawn tall — the HUD runs along the
+bottom — and nothing locks it that way yet. In
+`android/app/src/main/AndroidManifest.xml`, on the `<activity>` element:
 
-- **The back button.** Android's back closes the app by default, and the game
-  has no handler at all — so a player mid-harvest presses back and loses the
-  screen. It should close the bag panel or a modal first, and ask before
-  quitting.
-- **Orientation.** The game is built tall (the HUD sits along the bottom);
-  nothing locks it to portrait yet.
-- **`STORE.flush()` when the app goes to the background**, so a queued native
-  write is on disk before Android is free to kill the process. The
-  `localStorage` mirror already covers the worst case, so this is tidiness
-  rather than a hole.
-- A splash screen, and the app icon itself.
+```xml
+android:screenOrientation="portrait"
+```
+
+There is a Capacitor plugin that does the same at runtime, but a manifest
+attribute costs no dependency and no frame of the app appearing sideways
+first.
+
+## The icon
+
+`npm run icons` draws it from `drawItem('wheat')` — the same sheaf the game
+puts in your bag. Nothing is drawn twice by hand, so the icon cannot drift
+away from the game the way `ITEMS`' emoji column once drifted away from
+`drawItem()`. It writes `assets/`, which is build output and not committed:
+
+| | |
+|---|---|
+| `icon-only.png` | the flat icon, for the Play listing |
+| `icon-foreground.png` | the sheaf alone, kept inside the safe zone an adaptive icon may mask to |
+| `icon-background.png` | the field behind it |
+| `splash.png`, `splash-dark.png` | the launch screen |
+
+`npm run assets` then runs `@capacitor/assets` over them to produce every
+density Android wants.
+
+## What the shell already handles
+
+- **The back button.** Android's back closes an app with no listener, so back
+  mid-harvest used to lose the screen. It now closes whatever panel is open —
+  they are all the one `#modal` — and only when nothing is open does it ask
+  whether to leave, saving first. Tapping back twice does not quit. The logic
+  is `goBack()` in the game, not in the bridge, so the tests cover it.
+- **Saving when the app goes to the background.** Android may kill a
+  backgrounded app without warning, so `pause` saves and flushes the queued
+  native write while the process is still allowed to run.
 
 ## What is not here yet
 

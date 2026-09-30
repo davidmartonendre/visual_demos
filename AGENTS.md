@@ -162,6 +162,15 @@ deliberately.
 - With a keeper hired `keeperServe()` works the queue from `G.stock`, which the
   player fills from the panel. Anything that touches the stand has to handle both
   the keeper and the queue.
+- **`goBack()` is Android's back button, and it lives in the game, not the
+  bridge.** A phone closes an app whose back button nothing listens to, so
+  back mid-harvest used to lose the screen. Every panel here is the one
+  `#modal`, so backing out is always "close what is open"; only with nothing
+  open does it ask about leaving, and it saves before asking. It returns true
+  when it handled the press, and the bridge quits on false — which cannot
+  happen in a browser, where with nothing open it declines rather than
+  offering a LEAVE button that leads nowhere. Anything new that opens a screen
+  outside `#modal` has to be unwound there too.
 - While the panel is open the player's `tryStations()` stands down, or a tray under
   their feet would move goods behind the panel's back.
 - A workshop with more than one recipe it can make tosses a coin between them and
