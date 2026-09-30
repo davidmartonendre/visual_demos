@@ -1,4 +1,4 @@
-/* Test harness for Harvest Hero.
+/* Test harness for Pepere.
  *
  * The game is one HTML file with everything at script scope, so a test just
  * loads it in a headless browser and calls the game's own functions. There is

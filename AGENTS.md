@@ -1,4 +1,4 @@
-# Harvest Hero
+# Pepere
 
 A single-file browser game. **There is no build system, no package manager, and no
 framework here** — this repo previously held a Next.js site and it was removed
@@ -94,6 +94,13 @@ deliberately.
   in `saveData()` and read it in `applySave()` — never write a second serialiser.
 - Imported saves are untrusted input: `importSave()` decodes, sanitises and only then
   resets the world, so a bad paste can never leave a half-applied farm.
+- **The save key is still `harvest-hero-v1`, on purpose.** The game was called
+  Pepere only after the old name turned out to be taken on two stores. The key
+  is where every existing farm lives, so renaming it orphans all of them, and
+  the `game:'harvest-hero'` tag in the envelope is written but never read back
+  — `decodeSave()` checks the stamp, not the name. Neither is visible to a
+  player. Do not "tidy" either one: an identifier holding someone's save is not
+  a brand, and a migration for a cosmetic reason is a bad trade.
 - Saves are wrapped by `encodeSave()`/`decodeSave()`: the payload is scrambled and
   stamped, so editing a save in a text editor makes it fail to load. Treat this as
   tamper evidence only — the key is in this file and the console can edit `G`

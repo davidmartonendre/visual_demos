@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Run the Harvest Hero regression suite.
+/* Run the Pepere regression suite.
  *
  *   node tests/run.js            all specs
  *   node tests/run.js save hand  only specs whose file name matches

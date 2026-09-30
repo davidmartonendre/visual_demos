@@ -1,6 +1,6 @@
 # The Android shell
 
-Harvest Hero is one HTML file with no build step. This folder wraps that file
+Pepere is one HTML file with no build step. This folder wraps that file
 in a native app so it can go on Google Play, and gives it the two things a
 browser cannot: a durable place to keep a save, and later a way to be paid.
 
@@ -63,19 +63,22 @@ for, and that is not built yet.
 
 ## Before Google will take it
 
-- **`appId` is permanent; the store name is not.** The id is
-  `io.github.davidmartonendre.pepere`, after the farming district outside
-  Hódmezővásárhely. It is tied to a GitHub account rather than a domain or a
-  company, so it outlives both. After the first upload to Play it can never be
-  changed, only abandoned — so it is the one thing worth settling before you
-  build. The name on the listing can be changed any afternoon.
-- **The name still wants deciding.** "Harvest Hero" is taken twice over: a
-  match-3 game on Google Play (`com.vg.harvesthero`) and *Harvest Hero Origins*
-  on Steam, and `harvesthero.com` is registered. Nothing stops you shipping
-  under it — Play allows duplicate names — but you would launch into a search
-  result you do not own. `Hollowbrook`, the valley in the game, is a horror
-  game on Steam as of 2025, so keep that one inside the story. Nothing at all
-  ships as *Pepere*.
+- **`appId` is permanent.** It is `lol.pepere.game`, from the `pepere.lol`
+  domain. After the first upload to Play it can never be changed, only
+  abandoned. The name on the listing can be changed any afternoon, so the id is
+  the only part of this worth settling before you build.
+- **The name is Pepere**, after the farming district outside Hódmezővásárhely.
+  It was *Harvest Hero* until that went on a store listing: there is already a
+  match-3 game of that name on Google Play (`com.vg.harvesthero`) and *Harvest
+  Hero Origins* on Steam, and `harvesthero.com` is taken. `Hollowbrook`, the
+  valley inside the game, is a horror game on Steam as of 2025 — fine in the
+  story, wrong on a shelf beside it. Nothing at all ships as *Pepere*.
+- **`.lol` is a real top-level domain and Play does not care**, but two things
+  come with it. Some corporate and school networks block novelty TLDs, and
+  Google's reviewer has to be able to open your privacy policy — so host that
+  on the Azure site, or point `pepere.lol` at the Azure site and use it for
+  both. Mail from a `.lol` address also lands in spam more often than it
+  should, which matters the day you put a support address on the listing.
 - A Play Console account: **$25, once**. A brand-new personal account must
   then run a closed test with **12 testers for 14 days** before it can go
   public, so start that clock early — it is the longest pole here by weeks.
@@ -86,7 +89,9 @@ for, and that is not built yet.
   two phone screenshots, an 80-character short description and a long one.
 - **A privacy policy at a real URL.** Play requires one the moment an ad or
   analytics SDK is in the build. The Azure site already serves this repo, so a
-  `privacy.html` beside `index.html` is the cheapest honest answer.
+  `privacy.html` beside `index.html` is the cheapest honest answer — and
+  `pepere.lol` can point at that same site as a custom domain, which the Free
+  tier allows.
 - The data safety form, and an age rating. Rate it for everyone but keep it
   **out of the Kids category** unless you mean it: a child-directed listing
   bans personalised ads and takes the rate down with it.

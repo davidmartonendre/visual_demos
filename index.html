@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Harvest Hero</title>
+<title>Pepere</title>
 <meta name="description" content="A cosy isometric farm tycoon: sweep the wheat, haul the harvest, build up the farm.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BE%3C/text%3E%3C/svg%3E">
 <style>
@@ -588,6 +588,13 @@ function serveStand(a){
 }
 
 /* -------------------------------------------------------------- persistence */
+/* The game was called Harvest Hero until the name went on a store listing and
+   turned out to be taken twice over. This key, and the `game` tag in the
+   envelope below, deliberately did NOT follow it: the key is where every
+   existing farm lives, so renaming it orphans all of them, and the tag is
+   written but never read back -- decodeSave() checks the stamp, not the name.
+   Neither is visible to a player. An identifier that holds someone's save is
+   not a brand, and a migration for a cosmetic reason is a bad trade. */
 const SAVE_KEY = 'harvest-hero-v1';
 
 /* ---- where the bytes live ----------------------------------------------
@@ -734,7 +741,7 @@ function decodeSave(text){
     return { error:'That file does not contain a save.' };
   if(typeof env.d !== 'string' || typeof env.s !== 'string'){
     if(env.coins !== undefined || env.up) return { legacy:env };
-    return { error:'That does not look like a Harvest Hero save.' };
+    return { error:'That does not look like a Pepere save.' };
   }
   if(stamp(env.d) !== env.s)
     return { error:'That save has been edited, so it will not load.' };
@@ -892,7 +899,7 @@ function applySave(d){
    Download is blocked in some sandboxed embeds, so the same text is always
    shown for copy/paste as well; either route restores the same farm.      */
 function saveFileName(){
-  return 'harvest-hero-level-' + G.level + '-' + new Date().toISOString().slice(0,10) + '.json';
+  return 'pepere-level-' + G.level + '-' + new Date().toISOString().slice(0,10) + '.json';
 }
 function exportSave(){
   save();

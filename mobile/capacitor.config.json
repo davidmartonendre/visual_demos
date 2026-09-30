@@ -1,6 +1,6 @@
 {
-  "appId": "io.github.davidmartonendre.pepere",
-  "appName": "Harvest Hero",
+  "appId": "lol.pepere.game",
+  "appName": "Pepere",
   "webDir": "www",
   "android": {
     "backgroundColor": "#1b2a14"

@@ -1,4 +1,4 @@
-# How Harvest Hero is built
+# How Pepere is built
 
 This is the map you want open when you change something. It is written for
 someone who can read code but has never worked on a game before.
