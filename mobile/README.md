@@ -63,22 +63,35 @@ for, and that is not built yet.
 
 ## Before Google will take it
 
-- **`appId` is permanent.** It is `lol.pepere.game`, from the `pepere.lol`
-  domain. After the first upload to Play it can never be changed, only
-  abandoned. The name on the listing can be changed any afternoon, so the id is
-  the only part of this worth settling before you build.
+- **`appId` is permanent.** It is `io.github.davidmartonendre.pepere`. After
+  the first upload to Play it can never be changed, only abandoned. The name on
+  the listing can be changed any afternoon, so the id is the only part of this
+  worth settling before you build.
+- **It is deliberately not built on `pepere.lol`.** Reverse-DNS is a convention
+  for avoiding collisions, not a claim of ownership — Play never checks who
+  holds the domain, and a package name is yours permanently once uploaded. So a
+  domain-shaped id buys nothing, while committing the one string that can never
+  change to one that must be paid for every year. `.lol` renews at roughly
+  twenty times its first-year price. A GitHub account has no renewal date.
+  **Do not "correct" this to a domain later**: by then it cannot be changed at
+  all, and the domain may belong to someone else.
 - **The name is Pepere**, after the farming district outside Hódmezővásárhely.
   It was *Harvest Hero* until that went on a store listing: there is already a
   match-3 game of that name on Google Play (`com.vg.harvesthero`) and *Harvest
   Hero Origins* on Steam, and `harvesthero.com` is taken. `Hollowbrook`, the
   valley inside the game, is a horror game on Steam as of 2025 — fine in the
   story, wrong on a shelf beside it. Nothing at all ships as *Pepere*.
-- **`.lol` is a real top-level domain and Play does not care**, but two things
-  come with it. Some corporate and school networks block novelty TLDs, and
-  Google's reviewer has to be able to open your privacy policy — so host that
-  on the Azure site, or point `pepere.lol` at the Azure site and use it for
-  both. Mail from a `.lol` address also lands in spam more often than it
-  should, which matters the day you put a support address on the listing.
+- **Keep the domain out of anything hard to change.** `pepere.lol` is a nice
+  address to hand people and nothing depends on it. What would hurt is putting
+  it where it cannot be pulled back: the privacy policy URL above all, because
+  Play requires that link to work and pulls apps whose link has died. Worse
+  than losing the domain is somebody else buying it — an expired domain with
+  traffic gets picked up quickly, and then your store listing points at a
+  stranger's site under your game's name. Never set up App Links
+  (`assetlinks.json`) on a domain you might drop: whoever holds it can claim
+  your deep links. Two smaller things: some corporate and school networks block
+  novelty TLDs, and mail from a `.lol` address lands in spam more often than it
+  should.
 - A Play Console account: **$25, once**. A brand-new personal account must
   then run a closed test with **12 testers for 14 days** before it can go
   public, so start that clock early — it is the longest pole here by weeks.
@@ -89,9 +102,9 @@ for, and that is not built yet.
   two phone screenshots, an 80-character short description and a long one.
 - **A privacy policy at a real URL.** Play requires one the moment an ad or
   analytics SDK is in the build. The Azure site already serves this repo, so a
-  `privacy.html` beside `index.html` is the cheapest honest answer — and
-  `pepere.lol` can point at that same site as a custom domain, which the Free
-  tier allows.
+  `privacy.html` beside `index.html` is the cheapest honest answer. Put the
+  **Azure URL** on the listing, not a `pepere.lol` one, even if you point the
+  domain at the same site: the listing should survive the domain lapsing.
 - The data safety form, and an age rating. Rate it for everyone but keep it
   **out of the Kids category** unless you mean it: a child-directed listing
   bans personalised ads and takes the rate down with it.
