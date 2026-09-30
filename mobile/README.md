@@ -63,17 +63,50 @@ for, and that is not built yet.
 
 ## Before Google will take it
 
-- **`appId` is permanent.** It is `technology.wecan.harvesthero` in
-  `capacitor.config.json`. Change it now if you want it different — after
-  the first upload to Play it can never be changed, only abandoned.
+- **`appId` is permanent; the store name is not.** The id is
+  `io.github.davidmartonendre.pepere`, after the farming district outside
+  Hódmezővásárhely. It is tied to a GitHub account rather than a domain or a
+  company, so it outlives both. After the first upload to Play it can never be
+  changed, only abandoned — so it is the one thing worth settling before you
+  build. The name on the listing can be changed any afternoon.
+- **The name still wants deciding.** "Harvest Hero" is taken twice over: a
+  match-3 game on Google Play (`com.vg.harvesthero`) and *Harvest Hero Origins*
+  on Steam, and `harvesthero.com` is registered. Nothing stops you shipping
+  under it — Play allows duplicate names — but you would launch into a search
+  result you do not own. `Hollowbrook`, the valley in the game, is a horror
+  game on Steam as of 2025, so keep that one inside the story. Nothing at all
+  ships as *Pepere*.
 - A Play Console account: **$25, once**. A brand-new personal account must
   then run a closed test with **12 testers for 14 days** before it can go
   public, so start that clock early — it is the longest pole here by weeks.
 - An upload key. Android Studio: Build → Generate Signed App Bundle → create
   a keystore. **Back that file up somewhere you will still have it in three
   years.** Lose it and you cannot update your own app.
-- Icon, feature graphic, screenshots, a privacy policy URL, and the data
-  safety form.
+- Icon (512×512 and the adaptive layers), a 1024×500 feature graphic, at least
+  two phone screenshots, an 80-character short description and a long one.
+- **A privacy policy at a real URL.** Play requires one the moment an ad or
+  analytics SDK is in the build. The Azure site already serves this repo, so a
+  `privacy.html` beside `index.html` is the cheapest honest answer.
+- The data safety form, and an age rating. Rate it for everyone but keep it
+  **out of the Kids category** unless you mean it: a child-directed listing
+  bans personalised ads and takes the rate down with it.
+
+## Still missing from the shell
+
+Things a browser does not need and a phone does. None is hard; all are
+invisible until you are holding the device.
+
+- **The back button.** Android's back closes the app by default, and the game
+  has no handler at all — so a player mid-harvest presses back and loses the
+  screen. It should close the bag panel or a modal first, and ask before
+  quitting.
+- **Orientation.** The game is built tall (the HUD sits along the bottom);
+  nothing locks it to portrait yet.
+- **`STORE.flush()` when the app goes to the background**, so a queued native
+  write is on disk before Android is free to kill the process. The
+  `localStorage` mirror already covers the worst case, so this is tidiness
+  rather than a hole.
+- A splash screen, and the app icon itself.
 
 ## What is not here yet
 
