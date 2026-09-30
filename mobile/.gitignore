@@ -4,9 +4,10 @@ node_modules/
 # copy in here is never the source of anything.
 www/index.html
 
-# Capacitor generates this on `npx cap add android`. Once you have set the
-# icons, the signing config and the manifest by hand, delete this line and
-# commit it -- those are not generated and losing them costs an afternoon.
+# Capacitor generates this on `npx cap add android`, and manifest.mjs makes
+# the one edit it needs, so a clean clone can rebuild the folder from nothing.
+# The moment you put something in it that no script can reproduce -- a signing
+# config above all -- delete this line and commit the folder.
 android/
 
 # Generated from the game's own art by icon.mjs, so they are build output like

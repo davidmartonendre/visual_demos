@@ -22,8 +22,8 @@ this same folder.
 ```bash
 cd mobile
 npm install
-npx cap add android          # generates android/ -- once, ever
-npm run android              # copy the game, sync, open Android Studio
+npx cap add android          # generates android/
+npm run android              # copy the game, sync, set the manifest, open Studio
 ```
 
 Then press ▶ in Android Studio with a device plugged in or an emulator
@@ -40,6 +40,7 @@ press ▶ again.
 | `npm run android:release` | release sync, then open Android Studio |
 | `npm run icons` | redraw the app icon and splash from the game's own art |
 | `npm run assets` | that, then generate every Android density from them |
+| `npm run manifest` | set the manifest attributes Capacitor does not |
 | `npm run test:build` | **build the release file and run all 586 checks against it** |
 
 That last one is the point of the arrangement. The release build compresses
@@ -111,20 +112,23 @@ for, and that is not built yet.
   **out of the Kids category** unless you mean it: a child-directed listing
   bans personalised ads and takes the rate down with it.
 
-## One thing to do by hand
+## The manifest
 
-`npx cap add android` generates `android/`, and one line in it is worth
-setting before you build. The game is drawn tall — the HUD runs along the
-bottom — and nothing locks it that way yet. In
-`android/app/src/main/AndroidManifest.xml`, on the `<activity>` element:
+`npx cap add android` generates `android/`, and `manifest.mjs` makes the one
+edit it needs: `android:screenOrientation="portrait"`, because the game is
+drawn tall and the HUD runs along the bottom. A runtime plugin could do the
+same, but a manifest attribute costs no dependency and no frame of the app
+appearing sideways first.
 
-```xml
-android:screenOrientation="portrait"
-```
+`npm run android` runs it for you. It is idempotent, and it fails loudly
+rather than quietly doing nothing if the manifest is not the shape it
+expects — a silent no-op there turns up as a bug on a device much later.
 
-There is a Capacitor plugin that does the same at runtime, but a manifest
-attribute costs no dependency and no frame of the app appearing sideways
-first.
+One thing Capacitor sets that is worth knowing about: `allowBackup="true"`.
+Android's own auto-backup will copy the Preferences store to the player's
+Google Drive, so a farm already survives a new phone in a rough sort of way,
+before any cloud save is written. It can also restore a stale farm over a
+newer one, which is the case `resolveSave()` exists for.
 
 ## The icon
 

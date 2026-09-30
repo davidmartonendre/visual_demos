@@ -7,12 +7,13 @@
   "scripts": {
     "sync": "node sync.mjs",
     "sync:release": "node sync.mjs --release",
-    "android": "npm run sync && npx cap sync android && npx cap open android",
-    "android:release": "npm run sync:release && npx cap sync android && npx cap open android",
+    "android": "npm run sync && npx cap sync android && node manifest.mjs && npx cap open android",
+    "android:release": "npm run sync:release && npx cap sync android && node manifest.mjs && npx cap open android",
     "test:build": "npm run sync:release && node --run test:built",
     "test:built": "cd .. && HH_GAME=mobile/www/index.html node tests/run.js",
     "icons": "node icon.mjs",
-    "assets": "node icon.mjs && npx @capacitor/assets generate --android"
+    "assets": "node icon.mjs && npx @capacitor/assets generate --android",
+    "manifest": "node manifest.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
