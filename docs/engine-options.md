@@ -1,6 +1,6 @@
 # Where this should go next
 
-The question: can Harvest Hero move onto something more standard for a game, so it
+The question: can Pepere move onto something more standard for a game, so it
 can be packaged for Android and iOS later, while the web stays the main platform —
 and so a person who is not the author can work on it.
 

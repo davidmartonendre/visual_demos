@@ -1,0 +1,16 @@
+node_modules/
+
+# Build output: sync.mjs writes it from ../index.html on every build, so the
+# copy in here is never the source of anything.
+www/index.html
+
+# Capacitor generates this on `npx cap add android`, and manifest.mjs makes
+# the one edit it needs, so a clean clone can rebuild the folder from nothing.
+# The moment you put something in it that no script can reproduce -- a signing
+# config above all -- delete this line and commit the folder.
+android/
+
+# Generated from the game's own art by icon.mjs, so they are build output like
+# www/index.html rather than source. `npm run icons` rebuilds them; the source
+# is drawItem('wheat') in ../index.html.
+assets/

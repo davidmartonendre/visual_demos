@@ -1,4 +1,4 @@
-# 🌾 Harvest Hero
+# 🌾 Pepere
 
 A cosy isometric farm tycoon that runs in one HTML file.
 

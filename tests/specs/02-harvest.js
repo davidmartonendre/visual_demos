@@ -42,8 +42,12 @@ module.exports = {
     const full = await t.get(()=>({ carry: carried(player()), cap: actorCap(player()) }));
     t.eq(full.carry, full.cap, 'harvesting stops exactly at the bag limit');
 
-    /* Standing on the counter must not sell anything by itself. */
-    await t.run(()=>{ G.coins = 0; G.earned = 0; G.till = 0;
+    /* With auto-sell off, standing on the counter must not sell anything by
+       itself -- that was the bug the panel was built for. (Auto-sell ON is
+       the shipped default and puts the old behaviour back on purpose; 14-auto
+       covers it.) */
+    await t.run(()=>{ G.autoSell = false;
+                      G.coins = 0; G.earned = 0; G.till = 0;
                       const a = player(); a.carry = emptyBag(); a.carry.wheat = 20; });
     await t.stand(SELL.x, SELL.y);
     await t.tick(8);

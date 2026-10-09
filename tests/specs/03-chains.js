@@ -14,9 +14,45 @@ function unlockAll(){
   G.up.orchard = 1; G.up.cherry = 1;
 }
 
+/* Every feed square says what it wants when it is empty. "FEED 0" alone sent
+   players to a bakery tray holding the wrong thing. */
+function ghosts(){
+  const out = [];
+  for(const s of STATIONS){
+    for(const tr of s.trays){
+      if(tr.mode !== 'in') { out.push({ id:s.id, mode:tr.mode, ghost:trayGhost(s, tr) }); continue; }
+      s.bin[tr.item] = 0;
+      const empty = trayGhost(s, tr);
+      s.bin[tr.item] = 3;
+      const fed = trayGhost(s, tr);
+      s.bin[tr.item] = 0;
+      // checked in here: ITEM_ORDER is a page global, and a spec that reaches
+      // for one from Node dies with a bare "is not defined"
+      out.push({ id:s.id, mode:tr.mode, item:tr.item, empty, fed,
+                 real: ITEM_ORDER.indexOf(tr.item) >= 0 });
+    }
+  }
+  return out;
+}
+
 module.exports = {
   name: 'Production chains',
   async run(t){
+    /* ---- what an empty feed square shows ---- */
+    const g = await t.get(ghosts);
+    const ins = g.filter(r => r.mode === 'in');
+    t.gt(ins.length, 4, 'there are feed squares to check');
+    t.eq(ins.filter(r => r.empty === r.item).length, ins.length,
+         'every empty feed square shows the good it takes');
+    t.eq(ins.filter(r => r.fed === null).length, ins.length,
+         'and stops showing it once there is something in there');
+    t.eq(g.filter(r => r.mode !== 'in' && r.ghost !== null).length, 0,
+         'only feed squares get a hint -- an out tray fills itself');
+    // the hint is drawn by drawItem(), the same call the real pile uses, so a
+    // good with no drawing would be a blank square rather than a wrong one
+    t.eq(ins.filter(r => !r.real).length, 0,
+         'and every one of them names a real good');
+
     await t.reset();
     await t.run(unlockAll);
 

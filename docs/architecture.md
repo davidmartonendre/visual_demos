@@ -1,9 +1,9 @@
-# How Harvest Hero is built
+# How Pepere is built
 
 This is the map you want open when you change something. It is written for
 someone who can read code but has never worked on a game before.
 
-Everything is `index.html` — about 3,080 lines: CSS, markup and one long script. Nothing
+Everything is `index.html` — about 3,190 lines: CSS, markup and one long script. Nothing
 is imported, nothing is bundled, there is no framework. That was the right call to
 get a game working; the cost is that the whole program shares one scope, so any
 name is reachable from anywhere and a rename can break something 1,500 lines away
@@ -19,17 +19,18 @@ about living with it today.
 | 233–252 | maths helpers, `iso()`, `fmt()` | almost never |
 | 253–419 | **the world tables** — `ITEMS`, `PATCHES`, `STATIONS`, `STALL`, `STAND`, `BOARD`, `COSMETICS`, `PADS` | most gameplay changes |
 | 420–473 | game state: `resetGame()`, `newActor()`, the balance formulas | tuning |
-| 474–625 | villagers, the queue, the farm stand, the stall keeper | anything about buyers |
-| 626–856 | saving: `saveData`, `applySave`, `sanitiseSave`, the file envelope | a new field has to survive a reload |
-| 857–922 | sound and input | controls |
-| 923–1658 | **the simulation** — harvesting, stations, pads, farmhand AI, story, orders, party, `update()` | behaviour |
-| 1659–2685 | **the rendering** — ground, crops, trees, buildings, items, people, `draw()` | how it looks |
-| 2686–3084 | HUD sync, the bag panel, modals, `init()`, the frame loop | menus and screens |
+| 474–589 | villagers, the queue, the farm stand, the stall keeper | anything about buyers |
+| 590–678 | **where saves live**: `STORE`, and `ENT` — what the player has bought | anything about storage, the phone, or a purchase |
+| 679–922 | saving: `saveData`, `applySave`, `sanitiseSave`, `resolveSave`, the file envelope | a new field has to survive a reload |
+| 923–986 | sound and input | controls |
+| 987–1721 | **the simulation** — harvesting, stations, pads, farmhand AI, story, orders, party, `update()` | behaviour |
+| 1722–2748 | **the rendering** — ground, crops, trees, buildings, items, people, `draw()` | how it looks |
+| 2749–3186 | HUD sync, the bag panel, modals, `init()`, `boot()`, the frame loop | menus and screens |
 
 Two functions matter more than the rest:
 
-- **`update(dt)`** (1593) runs the world forward by `dt` seconds. It never draws.
-- **`draw()`** (2592) paints the current state. It never changes anything.
+- **`update(dt)`** (1658) runs the world forward by `dt` seconds. It never draws.
+- **`draw()`** (2657) paints the current state. It never changes anything.
 
 That split is the single most important convention in the file. Keep it. It is why
 the test suite can simulate ten minutes of farming in 40 milliseconds — it calls
@@ -99,14 +100,101 @@ the formula block at 409–420 rather than scattering `G.up.whatever` through th
 simulation.
 
 ### Add a rank
-A row in `RANKS` (1525), in level order. The ladder runs to 1000; `rankAt()`
+A row in `RANKS` (1589), in level order. The ladder runs to 1000; `rankAt()`
 resolves any level above the top of it, and a banner fires only from
 `checkLevel()`, never from a save being loaded.
+
+## Saves, and what a save is not allowed to do
+
+`STORE` (603) is the seam between the game and wherever the bytes actually go.
+`localStorage` is synchronous and a phone's native store is not, so rather than
+make the whole game asynchronous for it, the asynchronous part lives only at
+the edges: `prime()` once during `boot()`, and a queued push after each write.
+`save()` and `load()` stay synchronous, which is what lets a spec round-trip a
+farm inside one `page.evaluate()`.
+
+Three rules hold it together:
+
+- **The native store answers the read; `localStorage` always gets a copy.** If
+  the bridge fails, the WebView copy is still there and nobody loses a farm.
+- **Writes queue, never overlap.** Two `set()` calls in flight at once can land
+  out of order and leave the *older* farm on disk. `STORE.push` serialises them.
+- **Boot waits for `prime()`.** Starting the frame loop first shows a fresh farm
+  for a frame and then lets the autosave bury the real one. `window.BOOTED` says
+  the world is up, and the tests wait on it.
+
+**`ENT` (662) is what the player has bought, and it is deliberately not in a
+save.** This is the one rule in the file that is about money rather than taste.
+An APK is a zip, the game is a text file inside it, and `STAMP_KEY` is right
+there on screen — so anyone can forge a save that passes `decodeSave()`. The
+answer is not a better lock, because the key ships with the lock. The answer is
+that a save has nothing worth forging in it: `saveData()` never writes an
+entitlement, `applySave()` never restores one, and `refreshEntitlements()` asks
+the store afresh on every boot. A cracked save then buys a cheater coins in a
+single-player farming game, which costs you nothing.
+
+Two things would change that arithmetic, and both are worth refusing on their
+own merits: a leaderboard, and selling coins for money.
+
+`resolveSave()` (851) merges two devices. `earned` only ever goes up, so the
+bigger lifetime total is the longer-played farm; the clock only breaks a tie,
+because a player who fixes their timezone should not lose an afternoon.
+
+## The phone
+
+`mobile/` wraps this same file in a Capacitor app for Google Play. Its README
+has the commands. Three things about it are worth knowing from in here:
+
+- **`../index.html` stays the source.** `mobile/sync.mjs` copies it into
+  `mobile/www/` on every build. It refuses to run if the file no longer has
+  exactly one bare `<script>`, because that is where it injects the bridge.
+- **The release build compresses but does not rename top-level names**, so the
+  whole suite can run against the exact file that goes in the APK:
+  `HH_GAME=mobile/www/index.html node tests/run.js`, or `npm run test:build`
+  from `mobile/`. A build you can test beats a build that is slightly harder to
+  read.
+- **The phone's behaviour lives in the game where it can be tested.**
+  `goBack()` decides what Android's back button does; the bridge only routes
+  the event to it and quits if it comes back false. Same for the icon:
+  `mobile/icon.mjs` draws it by calling the game's own `drawItem('wheat')`
+  rather than shipping a picture that can drift.
+- **`mobile/www/hh-native.js` defines nothing at all if the plugin is missing**,
+  rather than defining something broken. The game then finds no bridge and stays
+  on `localStorage`, which is exactly what a browser does.
+
+## How much the farm does for you
+
+Two toggles in `G`, both on by default, both set from `openSettings()` behind
+the gear in the bottom row.
+
+`autoSell` is the older behaviour put back as a choice. On, the counter, the
+farm stand and the order board empty your bag as you stand on them; off, they
+raise a hint and `bagSpot()` offers the panel instead. The automatic path does
+not repeat the arithmetic — it calls `sellBag()`, `standBag()` and `boardBag()`
+a stack at a time, so there is one payout per place however the goods leave.
+
+`autoBuy` is the same bargain at the upgrade pads. On, `updatePads()` pours
+your coins in while you stand there. Off, it only marks the pad active and a
+BUY button appears, priced by `padOwing()` — which subtracts coins already in
+the pad, because turning the toggle off must not reprice an upgrade someone is
+halfway through.
 
 ## The traps
 
 These are all bugs that actually happened here.
 
+- **`resetGame()` saves on its way out.** So `resetGame(); load()` loads the
+  farm you just destroyed, not the one you wrote. `init()` reads the blob
+  first, resets, writes it back and only then loads -- that dance is not
+  decoration, and any spec that round-trips a save needs it too.
+- **`draw()` is invisible to the tests**, so a rule about what appears on
+  screen belongs in a function of its own that a spec can call. `trayGhost()`
+  is the pattern: it decides, `drawTray()` only paints.
+- **The order board sits close to the counter.** `bagSpot()` matches it by its
+  own rect first; a radius check calls it the market and opens the wrong panel.
+- **A purchase must never be restored from a save.** The stamp on a save file is
+  tamper evidence, not security — the key is in the file that ships. Anything the
+  player can edit has to be worthless to edit. See the section above.
 - **Anything filled over time needs a reservation counter.** Items fly to a tray
   over a couple of seconds and only land in the flyer's callback. A loop that checks
   the stored amount is reading a number that is seconds out of date, and unloads

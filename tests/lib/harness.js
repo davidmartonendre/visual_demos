@@ -1,4 +1,4 @@
-/* Test harness for Harvest Hero.
+/* Test harness for Pepere.
  *
  * The game is one HTML file with everything at script scope, so a test just
  * loads it in a headless browser and calls the game's own functions. There is
@@ -14,7 +14,11 @@
 const path = require('path');
 const fs = require('fs');
 
-const GAME = 'file://' + path.resolve(__dirname, '..', '..', 'index.html');
+/* The repo's index.html by default. HH_GAME points the whole suite at another
+   copy -- the mobile build uses it to check the minified file that actually
+   ships still passes all of this. */
+const GAME = 'file://' + path.resolve(__dirname, '..', '..',
+                                      process.env.HH_GAME || 'index.html');
 
 /* Playwright is not vendored -- this repo has no package manager by design.
    Look where a global install puts it, and say so plainly if it is absent. */
@@ -83,7 +87,9 @@ async function withPage(browser, fn){
   page.on('pageerror', e => t.errors.push('uncaught: ' + e.message));
   page.on('console', m => { if(m.type()==='error') t.errors.push('console: ' + m.text()); });
   await page.goto(GAME);
-  await page.waitForFunction(()=> typeof G !== 'undefined' && !!G);
+  /* The store is primed before the farm loads, so boot is async now. Waiting
+     on G alone caught the page mid-boot and specs raced the first autosave. */
+  await page.waitForFunction(()=> typeof G !== 'undefined' && !!G && window.BOOTED === true);
   try { await fn(t); }
   catch(e){ if(!(e instanceof Bail)) t.checks.push({ ok:false, msg:'threw: ' + e.message }); }
   await page.close();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Harvest Hero</title>
+<title>Pepere</title>
 <meta name="description" content="A cosy isometric farm tycoon: sweep the wheat, haul the harvest, build up the farm.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BE%3C/text%3E%3C/svg%3E">
 <style>
@@ -56,11 +56,26 @@
   #b-bag{position:absolute;left:50%;transform:translateX(-50%);z-index:6;
     bottom:calc(env(safe-area-inset-bottom,0px) + 128px);display:none;
     border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:16px;color:#4a3418;
-    padding:11px 20px 13px;border-radius:16px;letter-spacing:.02em;
+    padding:11px 20px 13px;border-radius:16px;letter-spacing:.02em;white-space:nowrap;
     background:linear-gradient(#ffe8a8,#f3c95f);box-shadow:0 5px 0 #c9942a,0 9px 16px rgba(0,0,0,.42)}
   #b-bag.on{display:block}
   #b-bag:active{transform:translateX(-50%) translateY(4px);box-shadow:0 1px 0 #c9942a}
+  /* The pad's BUY button sits above the bag's: the scythe pad and the order
+     board are both close enough to the counter for the two to be offered at
+     once, so they cannot share a slot. */
+  #b-buy{position:absolute;left:50%;transform:translateX(-50%);z-index:6;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 182px);display:none;
+    border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:16px;color:#fff;
+    padding:11px 20px 13px;border-radius:16px;letter-spacing:.02em;white-space:nowrap;
+    background:linear-gradient(#7ed34f,#4da32c);box-shadow:0 5px 0 #34781d,0 9px 16px rgba(0,0,0,.42)}
+  #b-buy.on{display:block}
+  #b-buy:active{transform:translateX(-50%) translateY(4px);box-shadow:0 1px 0 #34781d}
+  /* grey, not gone: the price stays on screen while you go and earn it */
+  #b-buy.poor,#b-buy.poor:active{transform:translateX(-50%);cursor:default;
+    background:linear-gradient(#ded4bd,#c2b69c);color:#7d6f59;
+    box-shadow:0 5px 0 #a3957c,0 9px 16px rgba(0,0,0,.3)}
   #bag{text-align:left;max-height:56vh;overflow-y:auto}
+  #sets{text-align:left}
   #bag .cq{font-size:12.5px;font-weight:800;color:#8a7b63}
   .crow.sep{border-bottom:none;margin-top:4px;padding-top:11px;border-top:2px solid rgba(122,79,29,.25)}
   #bagmsg{margin-top:8px;font-size:13px;font-weight:800;color:#b23b3b;min-height:16px}
@@ -117,6 +132,9 @@
   .crow .ci{font-size:22px;width:26px;text-align:center}
   .crow .ci img{width:26px;height:26px;display:block;margin:0 auto;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
   .crow .cn{flex:1;font-size:14.5px;font-weight:800}
+  .crow.set{align-items:flex-start;padding:10px 0}
+  .crow .cs{display:block;font-size:12px;font-weight:700;color:#8a7b63;
+    margin-top:3px;line-height:1.35;max-width:30ch}
   .cb{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:12.5px;color:#5c4526;
     padding:7px 11px 9px;border-radius:10px;min-width:82px;
     background:linear-gradient(#efe6d0,#d7c9a8);box-shadow:0 3px 0 #b0a084}
@@ -198,6 +216,7 @@
 
   <div id="hint" class="pop"></div>
 
+  <button id="b-buy"></button>
   <button id="b-bag">&#127890; INVENTORY</button>
 
   <div id="bottom">
@@ -209,6 +228,7 @@
       <button class="round" id="b-sound">&#128266;</button>
       <button class="round" id="b-journal" title="Journal">&#128214;</button>
       <button class="round" id="b-shop" title="Shop">&#128717;</button>
+      <button class="round" id="b-set" title="Settings">&#9881;</button>
       <button class="round" id="b-save" title="Save file">&#128190;</button>
       <button class="round" id="b-reset" title="Restart farm">&#8635;</button>
     </div>
@@ -440,7 +460,17 @@ function newActor(x,y,hand,lazy,job){
 function resetGame(){
   G = { coins:START_COINS, earned:0, level:1, up:{}, paid:{}, hands:0, handLazy:[], pickerLazy:[],
         stock:emptyBag(), till:0, cos:{}, wear:{}, party:null, t:0,
-        sound:true, seenHint:{}, won:false, story:{}, journal:[], orders:[] };
+        sound:true, seenHint:{}, won:false, story:{}, journal:[], orders:[],
+        /* How much the farm does for you. autoSell puts the old on-contact
+           selling back: walk onto a buying square and it empties your bag.
+           With it off -- the default -- the squares only point at the bag
+           panel and you choose what leaves the bag. autoBuy is the same
+           bargain at the upgrade pads: on, your coins pour in while you
+           stand there; off, a BUY button waits until you can afford it.
+
+           Both default ON: the game should play itself until someone wants
+           the reins, not the other way round. */
+        autoSell:true, autoBuy:true };
   for(const id of UPGRADE_IDS) G.up[id] = 0;
   for(const p of PADS) G.paid[p.id]=0;
 
@@ -580,6 +610,14 @@ function keeperServe(dt){
    hands goods over from the bag panel now; the farmhands never touch it. */
 function serveStand(a){
   if(!inRect(a, STAND) || carried(a) <= 0) return false;
+  /* With auto-sell on, standing here does the work: into stock if a keeper
+     minds the stall, otherwise straight to whoever asked. It goes through
+     standBag() rather than repeating it, so the two routes cannot drift. */
+  if(G.autoSell){
+    if(a.ioT < IO_INTERVAL) return false;
+    a.ioT -= IO_INTERVAL;
+    return standBag(ITEM_ORDER) === null;
+  }
   if(hasKeeper()) hint('stockit','Tap INVENTORY \u2014 the keeper sells whatever you leave');
   else if(customers.some(c=>c.state==='wait' && c.n>0))
     hint('stand','Tap INVENTORY to serve the queue \u2014 they pay '+
@@ -588,7 +626,97 @@ function serveStand(a){
 }
 
 /* -------------------------------------------------------------- persistence */
+/* The game was called Harvest Hero until the name went on a store listing and
+   turned out to be taken twice over. This key, and the `game` tag in the
+   envelope below, deliberately did NOT follow it: the key is where every
+   existing farm lives, so renaming it orphans all of them, and the tag is
+   written but never read back -- decodeSave() checks the stamp, not the name.
+   Neither is visible to a player. An identifier that holds someone's save is
+   not a brand, and a migration for a cosmetic reason is a bad trade. */
 const SAVE_KEY = 'harvest-hero-v1';
+
+/* ---- where the bytes live ----------------------------------------------
+   localStorage is synchronous; a phone's native store is not. Rather than
+   make the whole game async for it, the async lives only at the edges:
+   prime() once at boot, and a queued push after each write. save() and
+   load() stay synchronous, which is what lets a spec round-trip a farm
+   inside one page.evaluate().
+
+   The native store, when there is one, is the authority on read. We still
+   mirror every write into localStorage: if the native call fails the
+   WebView copy is the fallback, and a browser has nothing else.          */
+const STORE = {
+  native: null,      // the shell's bridge, once prime() has proved it works
+  cache: null,       // last text seen by the native store; null = ask localStorage
+  tail: Promise.resolve(),
+
+  prime(){
+    const n = typeof window !== 'undefined' ? window.HH_NATIVE : null;
+    if(!n || typeof n.get !== 'function') return Promise.resolve(false);
+    return Promise.resolve(n.get(SAVE_KEY)).then(v => {
+      this.native = n;
+      this.cache = (typeof v === 'string' && v) ? v : null;
+      return true;
+    }).catch(() => false);   // no native store: carry on with localStorage
+  },
+
+  read(){
+    if(this.native && this.cache !== null) return this.cache;
+    try{ return localStorage.getItem(SAVE_KEY); }catch(e){ return null; }
+  },
+
+  write(text){
+    if(this.native){
+      this.cache = text;
+      this.push(n => n.set(SAVE_KEY, text));
+    }
+    try{ localStorage.setItem(SAVE_KEY, text); }catch(e){}
+  },
+
+  clear(){
+    if(this.native){ this.cache = null; this.push(n => n.remove(SAVE_KEY)); }
+    try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  },
+
+  /* A bad blob is kept aside rather than letting the next autosave bury it. */
+  reject(text){
+    try{ localStorage.setItem(SAVE_KEY + '-rejected', text); }catch(e){}
+    this.clear();
+  },
+
+  /* Writes are queued, never parallel: two overlapping set() calls can land
+     out of order and leave the older farm on disk. */
+  push(fn){
+    const n = this.native;
+    this.tail = this.tail.then(() => fn(n)).catch(() => {});
+    return this.tail;
+  },
+
+  /* For a spec, or a shell that wants the disk settled before it backgrounds. */
+  flush(){ return this.tail; },
+};
+
+/* ---- entitlements -------------------------------------------------------
+   What the player has BOUGHT, which is deliberately NOT part of a save.
+   A save is a file the player can edit; a purchase has to come from the
+   store, so it is asked for afresh on every boot and never restored from
+   disk. saveData() must never learn about these keys, and sanitiseSave()
+   builds its result from scratch precisely so a forged one cannot smuggle
+   one in. Ads, when they arrive, ask adsOff() and nothing else.          */
+const ENTITLEMENTS = ['noads'];
+let ENT = {};
+const owns = id => !!ENT[id];
+const adsOff = () => owns('noads');
+
+function refreshEntitlements(){
+  const n = typeof window !== 'undefined' ? window.HH_NATIVE : null;
+  if(!n || typeof n.entitlements !== 'function'){ ENT = {}; return Promise.resolve(ENT); }
+  return Promise.resolve(n.entitlements()).then(list => {
+    ENT = {};
+    if(Array.isArray(list)) for(const id of list) if(ENTITLEMENTS.includes(id)) ENT[id] = 1;
+    return ENT;
+  }).catch(() => { ENT = {}; return ENT; });   // offline: sell nothing, grant nothing
+}
 
 /* A save is a plain object. localStorage and the save file carry the same
    thing, so anything that round-trips through one round-trips through both. */
@@ -599,6 +727,7 @@ function saveData(){
     game:'harvest-hero', format:3,
     savedAt:new Date().toISOString(), level:G.level,
     coins:G.coins, earned:G.earned, up:G.up, paid:G.paid, hands:G.hands,
+    autoSell:G.autoSell, autoBuy:G.autoBuy,
     handLazy:G.handLazy, pickerLazy:G.pickerLazy, stock:G.stock, till:G.till,
     cos:G.cos, wear:G.wear,
     sound:G.sound, seenHint:G.seenHint, won:G.won,
@@ -651,7 +780,7 @@ function decodeSave(text){
     return { error:'That file does not contain a save.' };
   if(typeof env.d !== 'string' || typeof env.s !== 'string'){
     if(env.coins !== undefined || env.up) return { legacy:env };
-    return { error:'That does not look like a Harvest Hero save.' };
+    return { error:'That does not look like a Pepere save.' };
   }
   if(stamp(env.d) !== env.s)
     return { error:'That save has been edited, so it will not load.' };
@@ -665,6 +794,11 @@ const intIn = (v, lo, hi)=>{
   return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : lo;
 };
 function sanitiseSave(d){
+  /* `out` is built from scratch and every field is named below. That is what
+     keeps a forged save from smuggling in a key the game later trusts --
+     notably an entitlement: a purchase comes from the store, never from a
+     file the player can edit. Copy fields in one at a time; never Object
+     .assign the input wholesale. */
   const out = {};
   out.up = {};
   for(const pad of PADS) out.up[pad.id] = intIn((d.up||{})[pad.id], 0, pad.max);
@@ -703,6 +837,10 @@ function sanitiseSave(d){
 
   out.sound = (d.sound !== false);
   out.won   = !!d.won;
+  // absent means on, so a save written before the toggles existed opens with
+  // the same defaults a new farm does rather than a mode nobody chose
+  out.autoSell = (d.autoSell !== false);
+  out.autoBuy  = (d.autoBuy  !== false);
 
   const ids = STORY.map(c=>c.id);
   out.story = {};
@@ -734,17 +872,14 @@ function sanitiseSave(d){
   return out;
 }
 
-function save(){
-  try{ localStorage.setItem(SAVE_KEY, encodeSave(saveData())); }catch(e){}
-}
+function save(){ STORE.write(encodeSave(saveData())); }
 let saveNotice = null;
 function rejectStored(text, why){
-  // keep the bad blob rather than letting the next autosave bury it
-  try{ localStorage.setItem(SAVE_KEY + '-rejected', text); localStorage.removeItem(SAVE_KEY); }catch(e){}
+  STORE.reject(text);
   saveNotice = why;
 }
 function load(){
-  let text=null; try{ text = localStorage.getItem(SAVE_KEY); }catch(e){}
+  const text = STORE.read();
   if(!text) return;
   const r = decodeSave(text);
   if(r.error){ rejectStored(text, r.error + ' Starting a new farm.'); return; }
@@ -754,10 +889,29 @@ function load(){
   applySave(sanitiseSave(d));
   if(r.legacy) save();
 }
+/* ---- two devices, one farm ---------------------------------------------
+   Cloud save is a sync store, not an authority: both phones write whatever
+   they hold, so a pull can turn up a farm that is not the one on this
+   screen. `earned` only ever goes up, which makes it the one honest
+   yardstick -- the bigger lifetime total is the longer-played farm. The
+   timestamp only breaks a tie, because a clock can be wrong and a player
+   who fixes their timezone should not lose an afternoon.
+
+   Pure on purpose: no globals, no I/O, so a spec can hammer it.          */
+function resolveSave(a, b){
+  if(!a || typeof a !== 'object') return b && typeof b === 'object' ? b : null;
+  if(!b || typeof b !== 'object') return a;
+  const ea = Number(a.earned) || 0, eb = Number(b.earned) || 0;
+  if(ea !== eb) return ea > eb ? a : b;
+  const ta = Date.parse(a.savedAt || '') || 0, tb = Date.parse(b.savedAt || '') || 0;
+  return tb > ta ? b : a;          // a tie keeps the farm already in hand
+}
+
 function applySave(d){
   G.coins=d.coins|0; G.earned=d.earned|0; G.hands=d.hands|0;
   Object.assign(G.up, d.up||{}); Object.assign(G.paid, d.paid||{});
   G.sound = d.sound!==false; G.seenHint = d.seenHint||{}; G.won=!!d.won;
+  G.autoSell = d.autoSell !== false; G.autoBuy = d.autoBuy !== false;
   G.story = d.story||{}; G.journal = d.journal||[];
   G.handLazy = Array.isArray(d.handLazy) ? d.handLazy.slice() : [];
   G.pickerLazy = Array.isArray(d.pickerLazy) ? d.pickerLazy.slice() : [];
@@ -789,7 +943,7 @@ function applySave(d){
    Download is blocked in some sandboxed embeds, so the same text is always
    shown for copy/paste as well; either route restores the same farm.      */
 function saveFileName(){
-  return 'harvest-hero-level-' + G.level + '-' + new Date().toISOString().slice(0,10) + '.json';
+  return 'pepere-level-' + G.level + '-' + new Date().toISOString().slice(0,10) + '.json';
 }
 function exportSave(){
   save();
@@ -1023,11 +1177,27 @@ function tryStations(a, dt){
       if(tr.mode==='sell'){
         if(!a.hand){
           collectTill();
-          /* Walking over the counter used to sell the whole bag, priciest
-             first, which is the accident the bag panel exists to prevent.
-             The player sells from there now, one good at a time. */
-          if(carried(a) > 0) hint('sellpanel','Tap INVENTORY \u2014 you choose what to sell');
-          else hint('pad','Coins pay for UPGRADES \u2014 stand on a glowing pad');
+          if(carried(a) <= 0){
+            hint('pad','Coins pay for UPGRADES \u2014 stand on a glowing pad');
+            return;
+          }
+          /* Walking over the counter emptied the whole bag priciest-first,
+             which is the accident the bag panel exists to prevent -- so it is
+             a choice now, not the default. With auto-sell on it comes back,
+             one stack per tick and through sellBag(), which is the panel's own
+             route: one payout path, whichever way the goods leave the bag. */
+          if(!G.autoSell){
+            hint('sellpanel','Tap INVENTORY \u2014 you choose what to sell');
+            return;
+          }
+          while(a.ioT >= IO_INTERVAL && carried(a) > 0){
+            a.ioT -= IO_INTERVAL;
+            let it = null, best = -1;
+            for(const k of ITEM_ORDER)
+              if(a.carry[k] > 0 && ITEMS[k].price > best){ best = ITEMS[k].price; it = k; }
+            if(!it) break;
+            sellBag([it]);
+          }
           return;
         }
         if(carried(a)<=0) continue;
@@ -1134,7 +1304,9 @@ function updatePads(dt){
       p.active = true;
       const cost = padCost(p);
       const need = cost - G.paid[p.id];
-      if(G.coins > 0 && need > 0){
+      // with auto-buy off the BUY button spends instead, but the pad still
+      // counts as active: that is how the button knows which one you are on
+      if(G.autoBuy && G.coins > 0 && need > 0){
         const rate = Math.max(14, (cost/1.8) * (0.4 + 1.2*(G.paid[p.id]/cost)));
         const amt = Math.min(rate*dt, G.coins, need);
         G.coins -= amt; G.paid[p.id] += amt;
@@ -1144,6 +1316,33 @@ function updatePads(dt){
       }
     }
   }
+}
+
+/* The pad under your feet, or null. `active` is set by updatePads(), which a
+   party suspends, so anything reading it has to rule a party out first. */
+function padHere(){
+  if(partyOn()) return null;
+  return PADS.find(p => p.active && (G.up[p.id]||0) < p.max && p.show()) || null;
+}
+
+/* What is left to pay on a pad. Coins already poured into it under auto-buy
+   stay poured: turning the toggle off must not quietly reprice an upgrade
+   somebody is halfway through. */
+function padOwing(p){ return Math.max(0, Math.ceil(padCost(p) - G.paid[p.id])); }
+
+/* The BUY button. Deliberately all-or-nothing: it spends only what is still
+   owed and only when that is covered, so the button can never leave a player
+   with an upgrade half paid for and no coins to finish it. */
+function buyHere(){
+  if(G.autoBuy) return 'Auto-buy is on \u2014 the pad takes your coins by itself.';
+  const p = padHere();
+  if(!p) return 'Stand on an upgrade pad first.';
+  const owing = padOwing(p);
+  if(G.coins < owing) return 'You need $' + fmt(owing - Math.floor(G.coins)) + ' more.';
+  G.coins -= owing;
+  buyPad(p);
+  save(); syncHUD();
+  return null;
 }
 
 function buyPad(p){
@@ -1370,38 +1569,51 @@ function refreshOrders(){
 }
 function orderDone(o){ return Object.keys(o.need).every(k=>o.need[k]<=0); }
 
-function serveBoard(a, dt){
-  if(!inRect(a, BOARD)) return false;
-  hint('board','The village posts orders here \u2014 they pay well over market');
-  let did = false;
-  while(a.ioT >= IO_INTERVAL){
-    let hit = null, key = null;
-    for(const o of G.orders){
-      for(const k in o.need){
-        if(o.need[k] > 0 && a.carry[k] > 0){ hit = o; key = k; break; }
-      }
-      if(hit) break;
-    }
-    if(!hit) break;
-    a.ioT -= IO_INTERVAL;
-    const step = Math.max(1, Math.min(a.carry[key], hit.need[key], flowStep(hit.items[key])));
-    a.carry[key] -= step; hit.need[key] -= step;
-    did = true;
-    const c = rectCenter(BOARD);
-    itemFlyer(key, {x:a.x,y:a.y}, c, null);
-    if(orderDone(hit)){
-      const pay = hit.pay;
-      G.coins += pay; G.earned += pay;
-      G.orders.splice(G.orders.indexOf(hit), 1);
-      G.orders.push(makeOrder());
-      sfx.buy(); shake = Math.max(shake, 7);
-      pops.push({x:c.x, y:c.y, z:2.2, t:0, txt:'ORDER FILLED +$'+fmt(pay), col:'#8ef07a', big:true});
-      for(let i=0;i<20;i++) puffs.push({x:c.x,y:c.y,z:.6,vx:rnd(-3,3),vy:rnd(-3,3),vz:rnd(2,5),
-        t:0,life:rnd(.5,1),col:['#ffe066','#8ef07a','#6fd0ff'][i%3],r:rnd(2.5,5)});
-      spawnCoinFx(); checkLevel(); save();
+function finishOrder(o, c){
+  const pay = o.pay;
+  G.coins += pay; G.earned += pay;
+  G.orders.splice(G.orders.indexOf(o), 1);
+  G.orders.push(makeOrder());
+  sfx.buy(); shake = Math.max(shake, 7);
+  pops.push({x:c.x, y:c.y, z:2.2, t:0, txt:'ORDER FILLED +$'+fmt(pay), col:'#8ef07a', big:true});
+  for(let i=0;i<20;i++) puffs.push({x:c.x,y:c.y,z:.6,vx:rnd(-3,3),vy:rnd(-3,3),vz:rnd(2,5),
+    t:0,life:rnd(.5,1),col:['#ffe066','#8ef07a','#6fd0ff'][i%3],r:rnd(2.5,5)});
+  spawnCoinFx(); checkLevel();
+}
+
+/* Hand goods to the posted orders. The automatic path and the bag panel both
+   come through here, so an order cannot pay one rate on contact and another
+   from a button. */
+function boardBag(keys){
+  const a = player(), c = rectCenter(BOARD);
+  let moved = 0;
+  for(const k of keys){
+    // finishing one removes it from G.orders, so walk a copy
+    for(const o of G.orders.slice()){
+      const want = o.need[k] || 0, have = a.carry[k] || 0;
+      if(want <= 0 || have <= 0) continue;
+      const step = Math.min(have, want);
+      a.carry[k] -= step; o.need[k] -= step; moved += step;
+      itemFlyer(k, {x:a.x, y:a.y}, c, null);
+      if(orderDone(o)) finishOrder(o, c);
     }
   }
-  return did;
+  if(!moved) return 'No order is asking for that.';
+  save();
+  return null;
+}
+
+function serveBoard(a, dt){
+  if(!inRect(a, BOARD)) return false;
+  if(!G.autoSell){
+    if(carried(a) > 0) hint('boardpanel','Tap INVENTORY \u2014 you choose what to hand over');
+    else hint('board','The village posts orders here \u2014 they pay well over market');
+    return false;
+  }
+  hint('board','The village posts orders here \u2014 they pay well over market');
+  if(a.ioT < IO_INTERVAL) return false;
+  a.ioT -= IO_INTERVAL;
+  return boardBag(ITEM_ORDER) === null;
 }
 
 /* ------------------------------------------------------------ the party
@@ -2187,6 +2399,16 @@ function iconTag(k, cls){
 }
 
 /* ------------------------------------------------------------ trays */
+/* What an empty feed square should be showing: the good it is waiting for.
+   "FEED 0" says nothing about what to bring, so a new player stands on a
+   bakery tray holding the wrong thing and nothing happens. Pulled out of
+   drawTray() because draw() is invisible to the tests -- this way the rule
+   can be checked without reading pixels. */
+function trayGhost(s, tr){
+  if(tr.mode !== 'in') return null;          // an out tray fills itself
+  return s.bin[tr.item] > 0 ? null : tr.item;
+}
+
 function drawTray(s, tr){
   const col = tr.mode==='in' ? '#3f8ad8' : tr.mode==='out' ? '#3fb85e' : '#e0a400';
   const pulse = 0.5 + 0.5*Math.sin(G.t*3);
@@ -2213,6 +2435,23 @@ function drawTray(s, tr){
   const pile = [];
   if(tr.mode==='in') for(let i=0;i<Math.min(n,18);i++) pile.push(tr.item);
   else for(const k of ITEM_ORDER){ for(let i=0;i<s.out[k] && pile.length<18;i++) pile.push(k); }
+  /* Empty: one faded copy of what goes in, breathing with the square so the
+     eye finds it. The real pile is drawn from the same drawItem(), so the
+     hint cannot end up showing a different good from the one the tray takes. */
+  const ghost = trayGhost(s, tr);
+  if(ghost){
+    const was = ctx.globalAlpha;
+    /* A dark disc behind it first. Alpha alone was not enough: a pale good on
+       a light blue tray -- the egg -- washed out whatever the opacity, because
+       the problem is contrast, not strength. The disc gives every good the
+       same backing, and reads as a slot waiting to be filled. */
+    ctx.globalAlpha = was * (0.20 + 0.06*pulse);
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy - 1, 20, 17, 0, 0, 6.29); ctx.fill();
+    ctx.globalAlpha = was * (0.52 + 0.16*pulse);
+    drawItem(ghost, p.sx, p.sy - 1, 1.2);
+    ctx.globalAlpha = was;
+  }
   pile.forEach((k,i)=>{
     const col2 = i%3, row = Math.floor(i/3);
     drawItem(k, p.sx + (col2-1)*15, p.sy + 4 - row*7 - (row%2)*2, 0.85);
@@ -2691,6 +2930,45 @@ function syncHUD(){
   const where = partyOn() ? null : bagSpot();
   el('b-bag').classList.toggle('on', !!where);
   if(bagOpen && bagOpen !== where) closeModal();
+
+  /* The BUY button exists only while auto-buy is off. It names what is still
+     owed -- coins already poured into the pad count -- and goes grey rather
+     than vanishing when you cannot afford it, so the price stays on screen
+     while you go and earn it. */
+  const pad = G.autoBuy ? null : padHere();
+  const buy = el('b-buy');
+  buy.classList.toggle('on', !!pad);
+  if(pad){
+    const owing = padOwing(pad), can = G.coins >= owing;
+    buy.classList.toggle('poor', !can);
+    buy.textContent = (can ? 'BUY ' : '') + pad.name + ' \u00b7 $' + fmt(owing);
+  }
+}
+
+/* ---- settings -----------------------------------------------------------
+   Two toggles for how much the farm does by itself. Both default on: the
+   game should play itself until somebody wants the reins. */
+function openSettings(){
+  const row = (key, name, on, when, whenOff) =>
+    '<div class="crow set"><span class="cn">'+name+
+      '<span class="cs">'+(on ? when : whenOff)+'</span></span>'+
+    '<button class="cb '+(on?'on':'')+'" data-s="'+key+'">'+(on?'ON':'OFF')+'</button></div>';
+  modal('How much the farm does for you',
+    '<div id="sets">'+
+      row('autoSell', 'Auto sell', G.autoSell,
+          'Walk onto the counter, the farm stand or the order board and your bag empties itself.',
+          'Those squares wait for you. Tap INVENTORY and pick what goes.') +
+      row('autoBuy', 'Auto buy', G.autoBuy,
+          'Stand on an upgrade pad and your coins pour in until it is paid off.',
+          'A BUY button waits on the pad, lit once you can afford what is left.') +
+    '</div>', 'CLOSE');
+  el('sets').querySelectorAll('.cb').forEach(b => {
+    b.onclick = ()=>{
+      G[b.dataset.s] = !G[b.dataset.s];
+      sfx.pick(); save(); syncHUD();
+      openSettings();                 // redraw in place, so the words update
+    };
+  });
 }
 
 function hint(key, text, force){
@@ -2825,7 +3103,11 @@ function openShop(){
    deliberate version of the same thing: it opens within reach of the counter
    or the stand and moves one good at a time.                              */
 function bagSpot(){
+  if(G.autoSell) return null;        // the squares do the choosing for you
   const a = player();
+  /* The board first, and by its own rect: it sits close enough to the counter
+     that a radius check would call it the market and open the wrong panel. */
+  if(inRect(a, BOARD)) return 'board';
   const sell = rectCenter(station('market').trays[0]);
   if(dist2(a.x, a.y, sell.x, sell.y) < 25) return 'market';
   const st = rectCenter(STAND);
@@ -2897,15 +3179,27 @@ let bagOpen = null;
 function openBag(where, msg){
   const a = player(), keeper = hasKeeper();
   const held = ITEM_ORDER.filter(k => a.carry[k] > 0);
+  const wanted = k => G.orders.reduce((t,o) => t + Math.max(0, o.need[k]||0), 0);
   let rows = held.map(k => {
     const have = a.carry[k];
     // the counter takes the lot, so its button can name the money. The stand
-    // only takes what the villager at the front asked for.
-    const label = where==='market' ? 'SELL $'+fmt(ITEMS[k].price*have) : (keeper ? 'STOCK IT' : 'SELL');
-    const note = where==='market' ? '' : ' \u00b7 $'+fmt(standPrice(k))+' each';
+    // only takes what the villager at the front asked for, and the board only
+    // what is actually on order -- offering the rest would be a dead button.
+    let label, note = '', cls = 'buy';
+    if(where==='market'){
+      label = 'SELL $'+fmt(ITEMS[k].price*have);
+    } else if(where==='board'){
+      const n = wanted(k);
+      label = n ? 'HAND OVER '+Math.min(have, n) : 'NOT ASKED';
+      note  = n ? ' \u00b7 '+n+' wanted' : '';
+      if(!n) cls = '';
+    } else {
+      label = keeper ? 'STOCK IT' : 'SELL';
+      note  = ' \u00b7 $'+fmt(standPrice(k))+' each';
+    }
     return '<div class="crow"><span class="ci">'+iconTag(k)+'</span>'+
            '<span class="cn">'+ITEMS[k].label+' <span class="cq">\u00d7'+have+note+'</span></span>'+
-           '<button class="cb buy" data-k="'+k+'">'+label+'</button></div>';
+           '<button class="cb '+cls+'" data-k="'+k+'">'+label+'</button></div>';
   }).join('');
   if(!held.length) rows = '<p class="sub">Your bag is empty \u2014 go and fill it.</p>';
   // the whole bag in one press, for when there is nothing to think about
@@ -2913,6 +3207,7 @@ function openBag(where, msg){
     let all = 'SERVE QUEUE';
     if(where==='market') all = 'SELL ALL \u00b7 $'+
       fmt(held.reduce((t,k)=>t + ITEMS[k].price*a.carry[k], 0));
+    else if(where==='board') all = 'HAND OVER ALL';
     else if(keeper) all = 'STOCK ALL';
     rows += '<div class="crow sep"><span class="ci">\u{1F392}</span>'+
             '<span class="cn">The whole bag</span>'+
@@ -2925,7 +3220,8 @@ function openBag(where, msg){
             '<button class="cb '+(got?'buy':'')+'" data-k="__till">'+
             (got ? 'COLLECT $'+fmt(G.till) : 'NOTHING YET')+'</button></div>';
   }
-  modal(where==='market' ? 'At the counter' : 'At the farm stand',
+  modal(where==='market' ? 'At the counter'
+      : where==='board'  ? 'At the order board' : 'At the farm stand',
     '<div id="bag">'+ rows +'</div><div id="bagmsg">'+(msg||'')+'</div>', 'CLOSE');
   bagOpen = where;                       // modal() clears it, so set it after
 
@@ -2935,7 +3231,9 @@ function openBag(where, msg){
       const keys = k === '__all' ? ITEM_ORDER : [k];
       let err = null;
       if(k === '__till') err = collectTill() ? null : 'The farmhands have not sold anything yet.';
-      else err = where==='market' ? sellBag(keys) : standBag(keys);
+      else if(where==='market') err = sellBag(keys);
+      else if(where==='board')  err = boardBag(keys);
+      else                      err = standBag(keys);
       // a level-up can put its own card on top; do not paint over it
       if(bagOpen === where) openBag(where, err);
     };
@@ -2999,6 +3297,28 @@ addEventListener('keydown', e=>{
   if(e.key === 'Escape' && el('modal').classList.contains('on')) closeModal();
 });
 
+/* ---- Android's back button ---------------------------------------------
+   A phone's back button does not go anywhere by default: with nothing
+   listening it closes the app, so a player mid-harvest taps it and the farm
+   goes off the screen. Every panel in this game -- the bag, the shop, the
+   journal, the ranks, a story card -- is the one #modal, so backing out is
+   always the same move: close what is open, and only offer to leave when
+   nothing is.
+
+   Returns true when it handled the press. The shell's bridge quits on false,
+   which cannot happen in a browser: there, with nothing open, back does
+   nothing at all rather than offering a LEAVE button that leads nowhere. */
+function goBack(){
+  if(el('modal').classList.contains('on')){ closeModal(); return true; }
+  const n = typeof window !== 'undefined' ? window.HH_NATIVE : null;
+  if(!n || typeof n.exit !== 'function') return false;
+  save();                       // never ask the question with the farm unsaved
+  modal('Leave the farm?',
+    '<p>Everything is saved. The valley will be exactly as you left it.</p>',
+    'LEAVE', { cancel:'KEEP PLAYING', onConfirm:()=>{ try{ n.exit(); }catch(e){} } });
+  return true;
+}
+
 function winModal(){
   modal('HARVEST FESTIVAL',
     '<p>Hollowbrook is a working valley again \u2014 the mill turning, the ovens lit, '+
@@ -3007,6 +3327,8 @@ function winModal(){
 }
 
 el('b-bag').onclick = ()=>{ const w = bagSpot(); if(w) openBag(w); };
+el('b-buy').onclick = ()=>{ const err = buyHere(); if(err) hint('buyerr', err, true); };
+el('b-set').onclick = openSettings;
 el('b-journal').onclick = openJournal;
 el('lvltxt').onclick = openRanks;
 el('b-shop').onclick = openShop;
@@ -3026,7 +3348,7 @@ el('b-reset').onclick = ()=>{
     'WIPE IT', { cancel:'KEEP MY FARM', danger:true, onConfirm:doReset });
 };
 function doReset(){
-  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  STORE.clear();
   const snd = G.sound;
   resetGame(); G.sound = snd;
   buildDecor();
@@ -3038,9 +3360,9 @@ function doReset(){
    BOOT
    ===================================================================== */
 function init(){
-  let raw=null; try{ raw = localStorage.getItem(SAVE_KEY); }catch(e){}
+  const raw = STORE.read();
   resetGame();
-  if(raw){ try{ localStorage.setItem(SAVE_KEY, raw); }catch(e){} load(); }
+  if(raw){ STORE.write(raw); load(); }
   buildDecor();
   resize();
   const p = iso(player().x, player().y); cam.x=p.sx; cam.y=p.sy;
@@ -3053,6 +3375,7 @@ function init(){
     '<p>' + saveNotice + '</p>' +
     '<p class="sub">The old file was kept aside rather than overwritten, so nothing is lost for good.</p>',
     'START FRESH');
+  window.BOOTED = true;
 }
 
 let last = performance.now();
@@ -3063,8 +3386,22 @@ function frame(now){
   draw();
   requestAnimationFrame(frame);
 }
-init();
-requestAnimationFrame(frame);
+
+/* The native store answers asynchronously, so the farm cannot load until it
+   has. Starting the loop first would show a fresh farm for a frame and then
+   let the autosave bury the real one, so both wait. In a browser there is no
+   native store and prime() resolves on the spot.
+
+   BOOTED says the world is up; the tests wait on it rather than on a timer. */
+function boot(){
+  STORE.prime().then(() => {
+    init();
+    refreshEntitlements();       // purchases come from the store, not the save
+    last = performance.now();
+    requestAnimationFrame(frame);
+  });
+}
+boot();
 </script>
 </body>
 </html>

@@ -1,0 +1,29 @@
+{
+  "name": "pepere-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Android shell for Pepere. The game is ../index.html and has no build step; this folder only wraps it.",
+  "scripts": {
+    "sync": "node sync.mjs",
+    "sync:release": "node sync.mjs --release",
+    "android": "npm run sync && npx cap sync android && node manifest.mjs && npx cap open android",
+    "android:release": "npm run sync:release && npx cap sync android && node manifest.mjs && npx cap open android",
+    "test:build": "npm run sync:release && node --run test:built",
+    "test:built": "cd .. && HH_GAME=mobile/www/index.html node tests/run.js",
+    "icons": "node icon.mjs",
+    "assets": "node icon.mjs && npx @capacitor/assets generate --android",
+    "manifest": "node manifest.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/preferences": "^8.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
+    "terser": "^5.51.2"
+  }
+}
