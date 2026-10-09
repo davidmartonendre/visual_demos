@@ -61,6 +61,14 @@ deliberately.
   anything unlisted, subtracted from an empty stack, and drove the wheat count
   negative while paying wheat rates for cheese. Anything that picks an item to move
   must pick one the actor is actually holding, and bail out when there is none.
+- **An empty feed square shows the good it wants**, faded, on a dark disc.
+  "FEED 0" alone says nothing about what to bring, so a player stands on a
+  bakery tray holding the wrong thing and nothing happens. `trayGhost()` makes
+  the decision and `drawTray()` only paints it — `draw()` is invisible to the
+  tests, so the rule lives where a spec can reach it. The hint goes through
+  the same `drawItem()` as the real pile, so it cannot show a different good
+  from the one the tray takes. The disc is not decoration: alpha alone washed
+  the egg out against the blue tray, because the problem was contrast.
 - Anything laid out along a building (stall produce, counter prices) must be spaced
   from that building's own width and capped, or it marches off the end once enough
   goods are unlocked.

@@ -187,6 +187,9 @@ These are all bugs that actually happened here.
   farm you just destroyed, not the one you wrote. `init()` reads the blob
   first, resets, writes it back and only then loads -- that dance is not
   decoration, and any spec that round-trips a save needs it too.
+- **`draw()` is invisible to the tests**, so a rule about what appears on
+  screen belongs in a function of its own that a spec can call. `trayGhost()`
+  is the pattern: it decides, `drawTray()` only paints.
 - **The order board sits close to the counter.** `bagSpot()` matches it by its
   own rect first; a radius check calls it the market and opens the wrong panel.
 - **A purchase must never be restored from a save.** The stamp on a save file is

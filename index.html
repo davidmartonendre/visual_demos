@@ -2399,6 +2399,16 @@ function iconTag(k, cls){
 }
 
 /* ------------------------------------------------------------ trays */
+/* What an empty feed square should be showing: the good it is waiting for.
+   "FEED 0" says nothing about what to bring, so a new player stands on a
+   bakery tray holding the wrong thing and nothing happens. Pulled out of
+   drawTray() because draw() is invisible to the tests -- this way the rule
+   can be checked without reading pixels. */
+function trayGhost(s, tr){
+  if(tr.mode !== 'in') return null;          // an out tray fills itself
+  return s.bin[tr.item] > 0 ? null : tr.item;
+}
+
 function drawTray(s, tr){
   const col = tr.mode==='in' ? '#3f8ad8' : tr.mode==='out' ? '#3fb85e' : '#e0a400';
   const pulse = 0.5 + 0.5*Math.sin(G.t*3);
@@ -2425,6 +2435,23 @@ function drawTray(s, tr){
   const pile = [];
   if(tr.mode==='in') for(let i=0;i<Math.min(n,18);i++) pile.push(tr.item);
   else for(const k of ITEM_ORDER){ for(let i=0;i<s.out[k] && pile.length<18;i++) pile.push(k); }
+  /* Empty: one faded copy of what goes in, breathing with the square so the
+     eye finds it. The real pile is drawn from the same drawItem(), so the
+     hint cannot end up showing a different good from the one the tray takes. */
+  const ghost = trayGhost(s, tr);
+  if(ghost){
+    const was = ctx.globalAlpha;
+    /* A dark disc behind it first. Alpha alone was not enough: a pale good on
+       a light blue tray -- the egg -- washed out whatever the opacity, because
+       the problem is contrast, not strength. The disc gives every good the
+       same backing, and reads as a slot waiting to be filled. */
+    ctx.globalAlpha = was * (0.20 + 0.06*pulse);
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy - 1, 20, 17, 0, 0, 6.29); ctx.fill();
+    ctx.globalAlpha = was * (0.52 + 0.16*pulse);
+    drawItem(ghost, p.sx, p.sy - 1, 1.2);
+    ctx.globalAlpha = was;
+  }
   pile.forEach((k,i)=>{
     const col2 = i%3, row = Math.floor(i/3);
     drawItem(k, p.sx + (col2-1)*15, p.sy + 4 - row*7 - (row%2)*2, 0.85);
