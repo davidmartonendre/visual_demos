@@ -162,10 +162,33 @@ has the commands. Three things about it are worth knowing from in here:
   rather than defining something broken. The game then finds no bridge and stays
   on `localStorage`, which is exactly what a browser does.
 
+## How much the farm does for you
+
+Two toggles in `G`, both on by default, both set from `openSettings()` behind
+the gear in the bottom row.
+
+`autoSell` is the older behaviour put back as a choice. On, the counter, the
+farm stand and the order board empty your bag as you stand on them; off, they
+raise a hint and `bagSpot()` offers the panel instead. The automatic path does
+not repeat the arithmetic — it calls `sellBag()`, `standBag()` and `boardBag()`
+a stack at a time, so there is one payout per place however the goods leave.
+
+`autoBuy` is the same bargain at the upgrade pads. On, `updatePads()` pours
+your coins in while you stand there. Off, it only marks the pad active and a
+BUY button appears, priced by `padOwing()` — which subtracts coins already in
+the pad, because turning the toggle off must not reprice an upgrade someone is
+halfway through.
+
 ## The traps
 
 These are all bugs that actually happened here.
 
+- **`resetGame()` saves on its way out.** So `resetGame(); load()` loads the
+  farm you just destroyed, not the one you wrote. `init()` reads the blob
+  first, resets, writes it back and only then loads -- that dance is not
+  decoration, and any spec that round-trips a save needs it too.
+- **The order board sits close to the counter.** `bagSpot()` matches it by its
+  own rect first; a radius check calls it the market and opens the wrong panel.
 - **A purchase must never be restored from a save.** The stamp on a save file is
   tamper evidence, not security — the key is in the file that ships. Anything the
   player can edit has to be worthless to edit. See the section above.

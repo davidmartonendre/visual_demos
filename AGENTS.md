@@ -151,14 +151,32 @@ deliberately.
   collects by stepping on the money square or from the bag panel. Never pay a hand's
   sale straight into coins: it fires the coin effect continuously for work the player
   is not doing.
-- **The player only ever sells through the bag panel** (`openBag()`, `sellBag()`,
-  `standBag()`). The counter and the stand used to move goods on contact — the
-  counter emptied the whole bag priciest-first, and with a keeper hired the stand
-  poured it into the stall — so walking past cost you the load you were carrying
-  somewhere else. Standing there now only raises a hint. `serveStand()` is that
-  hint and nothing more; the panel has a row per good, a whole-bag button and the
-  takings, and anything new at either place needs a row in it. The farmhands still
-  sell on arrival at the market, because they have no panel to press.
+- **`G.autoSell` and `G.autoBuy` decide how much the farm does by itself.** Both
+  ship ON, and `openSettings()` behind the gear is their only home. Absent from
+  a save means on, so an old farm opens the way a new one does rather than in a
+  mode nobody chose.
+- **Goods leave the bag through `sellBag()`, `standBag()` or `boardBag()`,
+  whichever toggle is set.** With auto-sell on, the counter, the farm stand and
+  the order board empty the bag on contact; with it off they only raise a hint
+  and the bag panel does the moving. Either way it is the same three functions,
+  so a good cannot be worth one price on contact and another from a button —
+  the automatic path calls them a stack at a time rather than repeating their
+  arithmetic. Anything new that buys from the player needs a branch in both.
+  The counter emptying the whole bag priciest-first on contact is why the panel
+  exists: it cost you the load you were carrying somewhere else. That is a
+  choice now, not the default behaviour it once was.
+- The farmhands always sell on arrival at the market whatever the toggles say,
+  because they have no panel to press.
+- `bagSpot()` returns null whenever auto-sell is on, which is what hides the
+  INVENTORY button. It matches the order board by `inRect` BEFORE the radius
+  checks: the board sits close enough to the counter that a radius test calls
+  it the market and opens the wrong panel.
+- **With auto-buy off, `padOwing()` is the price and it subtracts what is
+  already in the pad.** Coins poured in under auto-buy stay poured — re-pricing
+  an upgrade somebody is halfway through charges them twice for the same coins.
+  `buyHere()` is deliberately all-or-nothing: it spends only what is owed and
+  only when that is covered, so the button can never leave a player with an
+  upgrade half paid for and nothing left to finish it.
 - With a keeper hired `keeperServe()` works the queue from `G.stock`, which the
   player fills from the panel. Anything that touches the stand has to handle both
   the keeper and the queue.

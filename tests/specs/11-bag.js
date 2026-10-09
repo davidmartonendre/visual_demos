@@ -10,6 +10,10 @@
  * the player stands to collect it, so their own body covered the money and it
  * looked as though the farmhands had earned nothing.
  *
+ * Auto-sell ships ON, which hides the panel entirely -- those squares do the
+ * work instead. This whole spec is about the manual mode, so it asks for it;
+ * 14-auto covers the automatic one.
+ *
  * Note for anyone adding to this file: the page's own frame loop is still
  * running between one evaluate and the next, so a load set down on a tray can
  * be sold before the next call arrives. Set the position and the bag in the
@@ -24,6 +28,7 @@ module.exports = {
   name: 'The bag panel',
   async run(t){
     await t.reset();
+    await t.run(()=>{ G.autoSell = false; });   // the panel only exists in manual mode
 
     /* The button knows where you are standing. */
     const near = await t.get(()=>{

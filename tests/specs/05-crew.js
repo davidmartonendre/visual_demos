@@ -68,7 +68,8 @@ module.exports = {
     /* With a keeper, the stand takes goods in bulk -- but only when the
        player says so. Standing there used to empty the bag into the stall,
        so walking past cost you the load. */
-    await t.run(()=>{ const a = player();
+    await t.run(()=>{ G.autoSell = false;        // auto-sell would stock it for you
+      const a = player();
       a.carry = emptyBag(); a.carry.cheese = 40; a.carry.cherrypie = 60;
       a.x = STAND.x + STAND.w/2; a.y = STAND.y + STAND.h/2; });
     await t.tick(12);
